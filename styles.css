@@ -1,6 +1,6 @@
 :root {
   --bg: #f5f6f8; --card: #ffffff; --text: #1a1d26; --muted: #8a90a0;
-  --accent: #6ec5a8; --up: #e6413d; --down: #12b76a; --line: #eceef2;
+  --accent: #6366f1; --up: #e6413d; --down: #12b76a; --line: #eceef2;
   --danger: #e6413d;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -33,7 +33,7 @@ body.scroll-locked { overflow: hidden; touch-action: none; }
 .token-eye .ico { width: 18px; height: 18px; display: block; color: var(--muted); }
 
 /* Sync bar (打开时/下拉刷新时显示) */
-.sync-bar { background: #d9efe5; color: var(--accent); font-size: 12px; text-align: center;
+.sync-bar { background: #e5e7fd; color: var(--accent); font-size: 12px; text-align: center;
   padding: 6px 12px; position: sticky; top: 44px; z-index: 9; }
 .sync-bar.hidden { display: none; }
 .sync-bar.error { background: #fdecec; color: var(--up); }
@@ -162,7 +162,7 @@ input, select { width: 100%; padding: 11px 12px; margin: 8px 0; border: 1px soli
 .dd-item { padding: 13px 18px; font-size: 15px; cursor: pointer; display: flex; align-items: center;
   gap: 10px; transition: background 0.12s; user-select: none; -webkit-user-select: none; }
 .dd-item:active { background: #f0f2f6; }
-.dd-item.active { color: var(--accent); font-weight: 600; background: #d9efe5; }
+.dd-item.active { color: var(--accent); font-weight: 600; background: #e5e7fd; }
 .dd-item .dd-icon { width: 20px; height: 20px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
 .dd-item .dd-icon svg { width: 18px; height: 18px; }
 .dd-divider { height: 1px; background: var(--line); margin: 0 12px; }
@@ -173,7 +173,7 @@ input, select { width: 100%; padding: 11px 12px; margin: 8px 0; border: 1px soli
   border: 1px solid var(--line); margin-bottom: 12px; overflow: hidden; }
 .trade-tab { flex: 1; padding: 10px; text-align: center; font-size: 13px; font-weight: 500;
   cursor: pointer; color: var(--muted); border: 0; background: none; transition: all 0.2s; }
-.trade-tab.active { color: var(--accent); background: #d9efe5; font-weight: 600; }
+.trade-tab.active { color: var(--accent); background: #e5e7fd; font-weight: 600; }
 
 .summary-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 12px; }
 .summary-card { background: var(--card); border-radius: 10px; padding: 10px 12px; border: 1px solid var(--line); }
@@ -201,7 +201,7 @@ input, select { width: 100%; padding: 11px 12px; margin: 8px 0; border: 1px soli
 .trade-list { display: flex; flex-direction: column; gap: 8px; }
 .trade-card { background: var(--card); border-radius: 12px; border: 1px solid var(--line);
   padding: 12px 14px; cursor: pointer; transition: box-shadow 0.15s; }
-.trade-card:active { box-shadow: 0 0 0 2px #d9efe5; }
+.trade-card:active { box-shadow: 0 0 0 2px #e5e7fd; }
 .tc-top { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 6px; }
 .tc-name { flex: 1; font-size: 14px; font-weight: 600; line-height: 1.3;
   overflow: hidden; text-overflow: ellipsis; display: -webkit-box;
@@ -220,7 +220,7 @@ input, select { width: 100%; padding: 11px 12px; margin: 8px 0; border: 1px soli
 .tc-badge { font-size: 11px; padding: 2px 8px; border-radius: 6px; font-weight: 500; }
 .tc-badge.shipped { background: #e6f7ef; color: var(--down); }
 .tc-badge.unshipped { background: #f5f5f5; color: var(--muted); }
-.tc-badge.paid { background: #d9efe5; color: var(--accent); }
+.tc-badge.paid { background: #e5e7fd; color: var(--accent); }
 .tc-badge.unpaid { background: #fff4e5; color: #f79009; }
 .tc-detail { display: none; margin-top: 10px; padding-top: 10px;
   border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); }
