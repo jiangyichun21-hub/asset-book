@@ -37,6 +37,8 @@
   </div>
 </header>
 <div id="dd-overlay"></div>
+<div id="sync-bar" class="sync-bar hidden"></div>
+<div id="ptr-indicator" class="ptr-indicator"><span class="ptr-spinner"></span><span class="ptr-text">下拉刷新</span></div>
 <main>
   <section id="view-assets" class="view"></section>
   <section id="view-trend" class="view hidden"></section>
@@ -94,6 +96,7 @@
   <button data-tab="trend" class="tab">趋势</button>
 </nav>
 <div id="modal-root"></div>
+<button id="fab-trade" class="fab-trade hidden" title="新增交易">＋</button>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script src="./core.js"></script>
 <script src="./gist.js"></script>

@@ -31,6 +31,48 @@ body.scroll-locked { overflow: hidden; touch-action: none; }
   border: 0; background: none; padding: 8px; cursor: pointer; color: var(--muted);
   display: flex; align-items: center; }
 .token-eye .ico { width: 18px; height: 18px; display: block; color: var(--muted); }
+
+/* Sync bar (打开时/下拉刷新时显示) */
+.sync-bar { background: #eef1fe; color: var(--accent); font-size: 12px; text-align: center;
+  padding: 6px 12px; position: sticky; top: 44px; z-index: 9; }
+.sync-bar.hidden { display: none; }
+.sync-bar.error { background: #fdecec; color: var(--up); }
+.sync-bar.ok { background: #e6f7ef; color: var(--down); }
+
+/* Pull-to-refresh indicator */
+.ptr-indicator { position: fixed; top: 0; left: 50%; padding: 0 16px; height: 44px;
+  display: flex; align-items: center; justify-content: center; color: var(--muted);
+  font-size: 13px; z-index: 5; transform: translateX(-50%) translateY(-50px);
+  transition: transform 0.2s; pointer-events: none; }
+.ptr-indicator.pull { transition: none; }
+.ptr-spinner { width: 14px; height: 14px; border: 2px solid var(--line);
+  border-top-color: var(--accent); border-radius: 50%; margin-right: 8px; display: inline-block; }
+.ptr-indicator.loading .ptr-spinner { animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* FAB for trade module */
+.fab-trade { position: fixed; bottom: calc(78px + env(safe-area-inset-bottom));
+  right: calc(50vw - 260px + 16px); width: 52px; height: 52px; border-radius: 50%;
+  border: 0; background: var(--accent); color: #fff; font-size: 28px; line-height: 52px;
+  box-shadow: 0 4px 12px rgba(79,110,247,.4); z-index: 8; cursor: pointer; padding: 0; }
+@media (max-width: 540px) { .fab-trade { right: 16px; } }
+.fab-trade.hidden { display: none; }
+
+/* Action sheet buttons (long-press menu) */
+.action-btn { display: block; width: 100%; text-align: left; padding: 14px 16px;
+  border: 0; background: var(--bg); border-radius: 10px; font-size: 15px;
+  margin-bottom: 8px; cursor: pointer; color: var(--text); }
+.action-btn.danger { color: var(--danger); }
+.action-btn:active { background: #e6e8ee; }
+
+/* Form (record add/edit) */
+.form-row { margin-bottom: 10px; }
+.form-row > label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+.form-row input, .form-row select { margin: 0; }
+.form-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.form-check { display: flex; gap: 14px; margin: 10px 0; flex-wrap: wrap; }
+.form-check label { display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--text); cursor: pointer; }
+.form-check input { width: auto; margin: 0; }
 .card h3 { display: flex; align-items: center; gap: 8px; }
 .card h3 .badge { margin-left: auto; }
 .icon-btn { border: 0; background: none; font-size: 20px; padding: 6px; cursor: pointer; color: var(--text); }

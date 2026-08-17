@@ -1,7 +1,7 @@
 /* global Core, Gist, Trades */
 'use strict';
 const LS_KEY = 'assetbook.v1';
-const BUILD_ID = '202608172200';
+const BUILD_ID = '202608172359';
 const $ = sel => document.querySelector(sel);
 
 let state = loadState();
@@ -151,6 +151,7 @@ function renderTabbar() {
         currentTradeTab = b.dataset.ttab;
         bar.querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x === b));
         Trades.switchTab(currentTradeTab);
+        updateTradeFab();
       };
     });
   }
@@ -183,6 +184,7 @@ function switchView(view) {
   }
   $('#tabbar').classList.remove('hidden');
   renderTabbar();
+  updateTradeFab();
   // Update title
   var titles = { asset: '资产', trade: '买卖记账' };
   $('#title').textContent = titles[view] || view;
@@ -759,5 +761,226 @@ window.addEventListener('popstate', function() {
   if (!$('#view-settings').classList.contains('hidden')) { closeSettingsDom(); return; }
 });
 
+// ---------- 买卖记账：FAB / 表单 / 动作面板 ----------
+function updateTradeFab() {
+  const fab = $('#fab-trade');
+  if (!fab) return;
+  const show = currentView === 'trade' && currentTradeTab === 'ledger'
+    && $('#view-settings').classList.contains('hidden');
+  fab.classList.toggle('hidden', !show);
+}
+function toast(msg) {
+  const t = document.createElement('div');
+  t.textContent = msg;
+  t.style.cssText = 'position:fixed;bottom:calc(90px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);background:rgba(0,0,0,.78);color:#fff;padding:9px 18px;border-radius:20px;font-size:14px;z-index:300;pointer-events:none;';
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 1500);
+}
+function nowLocalInput() {
+  const d = new Date(Date.now() - new Date().getTimezoneOffset() * 60000);
+  return d.toISOString().slice(0, 16);
+}
+function openTradeForm(record) {
+  const isEdit = !!record;
+  const r = record || {};
+  const html = '<h3>' + (isEdit ? '编辑交易' : '新增交易') + '</h3>' +
+    '<form id="trade-form">' +
+    '<div class="form-row"><label>商品名</label>' +
+      '<input name="name" required value="' + (r.name ? esc(r.name) : '') + '"></div>' +
+    '<div class="form-two-col">' +
+      '<div class="form-row"><label>平台</label>' +
+        '<input name="platform" value="' + (r.platform ? esc(r.platform) : '') + '" placeholder="如 197淘宝"></div>' +
+      '<div class="form-row"><label>时间</label>' +
+        '<input name="date" type="datetime-local" required value="' + (r.date ? r.date.replace(' ', 'T').slice(0,16) : nowLocalInput()) + '"></div>' +
+    '</div>' +
+    '<div class="form-two-col">' +
+      '<div class="form-row"><label>买入价</label>' +
+        '<input name="buyPrice" type="number" step="0.01" required value="' + (r.buyPrice != null ? r.buyPrice : '') + '"></div>' +
+      '<div class="form-row"><label>卖出价（可空）</label>' +
+        '<input name="sellPrice" type="number" step="0.01" value="' + (r.sellPrice ? r.sellPrice : '') + '"></div>' +
+    '</div>' +
+    '<div class="form-two-col">' +
+      '<div class="form-row"><label>手续费</label>' +
+        '<input name="fee" type="number" step="0.01" value="' + (r.fee != null ? r.fee : 0) + '"></div>' +
+      '<div class="form-row"><label>CPS 返现</label>' +
+        '<input name="cps" type="number" step="0.01" value="' + (r.cps != null ? r.cps : 0) + '"></div>' +
+    '</div>' +
+    '<div class="form-row"><label>买家</label>' +
+      '<input name="buyer" value="' + (r.buyer ? esc(r.buyer) : '') + '"></div>' +
+    '<div class="form-two-col">' +
+      '<div class="form-row"><label>买单号</label>' +
+        '<input name="buyOrderNo" value="' + (r.buyOrderNo ? esc(r.buyOrderNo) : '') + '"></div>' +
+      '<div class="form-row"><label>卖单号</label>' +
+        '<input name="sellOrderNo" value="' + (r.sellOrderNo ? esc(r.sellOrderNo) : '') + '"></div>' +
+    '</div>' +
+    '<div class="form-row"><label>备注</label>' +
+      '<input name="note" value="' + (r.note ? esc(r.note) : '') + '"></div>' +
+    '<div class="form-check">' +
+      '<label><input type="checkbox" name="shipped"' + (r.shipped ? ' checked' : '') + '>已发货</label>' +
+      '<label><input type="checkbox" name="paid"' + (r.paid ? ' checked' : '') + '>已回款</label>' +
+      '<label><input type="checkbox" name="cpsValid"' + (r.cpsValid !== false ? ' checked' : '') + '>CPS 有效</label>' +
+    '</div>' +
+    '<div class="btn-row">' +
+      '<button type="button" class="btn" id="tf-cancel">取消</button>' +
+      '<button type="submit" class="btn primary">保存</button>' +
+    '</div></form>';
+  openModal(html);
+  $('#tf-cancel').onclick = closeModal;
+  $('#trade-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const f = e.target;
+    const patch = {
+      name: f.name.value.trim(),
+      platform: f.platform.value.trim(),
+      date: f.date.value.replace('T', ' ') + ':00',
+      buyPrice: parseFloat(f.buyPrice.value) || 0,
+      sellPrice: parseFloat(f.sellPrice.value) || 0,
+      fee: parseFloat(f.fee.value) || 0,
+      cps: parseFloat(f.cps.value) || 0,
+      buyer: f.buyer.value.trim(),
+      buyOrderNo: f.buyOrderNo.value.trim(),
+      sellOrderNo: f.sellOrderNo.value.trim(),
+      note: f.note.value.trim(),
+      shipped: f.shipped.checked,
+      paid: f.paid.checked,
+      cpsValid: f.cpsValid.checked,
+      refunded: !!r.refunded
+    };
+    if (!patch.name) { alert('请填写商品名'); return; }
+    if (isEdit) Trades.updateRecord(r, patch);
+    else Trades.addRecord(patch);
+    Trades.refresh();
+    closeModal();
+    toast(isEdit ? '已保存' : '已添加');
+    scheduleBackup();
+  });
+}
+function openTradeActions(rec) {
+  if (!rec) return;
+  const title = rec.name.length > 20 ? rec.name.slice(0, 20) + '…' : rec.name;
+  const actions = [];
+  if (rec.refunded) {
+    actions.push({ label: '取消退款', fn: () => { Trades.markRefunded(rec, false); toast('已取消退款'); } });
+  } else {
+    actions.push({ label: rec.shipped ? '标为待发货' : '标为已发货',
+      fn: () => { Trades.markShipped(rec, !rec.shipped); toast(rec.shipped ? '已取消发货' : '已标发货'); } });
+    if (rec.sellPrice > 0) {
+      actions.push({ label: rec.paid ? '标为待回款' : '标为已回款',
+        fn: () => { Trades.markPaid(rec, !rec.paid); toast(rec.paid ? '已取消回款' : '已标回款'); } });
+    }
+    actions.push({ label: '编辑', fn: () => { closeModal(); setTimeout(() => openTradeForm(rec), 100); }, keepOpen: true });
+    actions.push({ label: '标为已退款', fn: () => { Trades.markRefunded(rec, true); toast('已标退款'); } });
+  }
+  actions.push({ label: '删除', danger: true, fn: () => {
+    if (!confirm('删除这条交易？不可恢复')) return;
+    Trades.deleteRecord(rec); toast('已删除');
+  } });
+  const html = '<h3>' + esc(title) + '</h3>' +
+    actions.map((a, i) => '<button class="action-btn' + (a.danger ? ' danger' : '') + '" data-i="' + i + '">' + a.label + '</button>').join('') +
+    '<div class="btn-row"><button class="btn" id="ta-cancel">取消</button></div>';
+  openModal(html);
+  $('#ta-cancel').onclick = closeModal;
+  document.querySelectorAll('#modal-root .action-btn').forEach(b => {
+    b.onclick = () => {
+      const a = actions[b.dataset.i];
+      a.fn();
+      if (!a.keepOpen) { Trades.refresh(); closeModal(); scheduleBackup(); }
+    };
+  });
+}
+document.addEventListener('trade-longpress', function(e) {
+  const idx = parseInt(e.detail.idx, 10);
+  const rec = Trades.getRecordByFilteredIdx(idx);
+  if (rec) openTradeActions(rec);
+});
+$('#fab-trade').onclick = () => openTradeForm(null);
+
+// ---------- 云同步条 / 打开自动拉 / 下拉刷新 ----------
+function showSync(kind, msg, autoHide) {
+  const bar = $('#sync-bar');
+  if (!bar) return;
+  bar.className = 'sync-bar' + (kind ? ' ' + kind : '');
+  bar.textContent = msg;
+  if (autoHide) setTimeout(() => bar.classList.add('hidden'), 2000);
+}
+function hideSync() { const bar = $('#sync-bar'); if (bar) bar.classList.add('hidden'); }
+async function pullFromGist(silent) {
+  const s = state.settings;
+  if (!s.gistToken || !s.gistId) { if (!silent) toast('未配置 Gist'); return false; }
+  try {
+    if (!silent) showSync('', '正在同步…');
+    const content = await Gist.fetchBackup(s.gistToken, s.gistId);
+    const parsed = await parseBackupContent(content, s.passphrase || '');
+    // Write assets state (preserve local settings/token)
+    const oldSettings = state.settings;
+    state = parsed.data;
+    state.settings = Object.assign({}, state.settings, oldSettings);
+    saveState();
+    // Write trades if present
+    if (parsed.trades) {
+      localStorage.setItem('assetbook.trades', parsed.trades);
+      if (window.Trades) Trades.reload();
+    }
+    renderAll();
+    showSync('ok', '已同步 · ' + new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }), true);
+    return true;
+  } catch (e) {
+    console.error('pull failed', e);
+    showSync('error', '同步失败：' + (e && e.message ? e.message : String(e)), false);
+    return false;
+  }
+}
+
+// Pull-to-refresh
+(function() {
+  let startY = 0, pull = 0, pulling = false;
+  const indicator = $('#ptr-indicator');
+  const ptrText = indicator ? indicator.querySelector('.ptr-text') : null;
+  document.addEventListener('touchstart', e => {
+    // Ignore when a modal/overlay is up or scrolled down
+    if ($('#modal-root').innerHTML) return;
+    if (window.scrollY > 2) return;
+    startY = e.touches[0].clientY; pulling = true; pull = 0;
+  }, { passive: true });
+  document.addEventListener('touchmove', e => {
+    if (!pulling) return;
+    pull = e.touches[0].clientY - startY;
+    if (pull > 0 && pull < 120) {
+      indicator.classList.add('pull');
+      indicator.style.transform = 'translateX(-50%) translateY(' + Math.min(pull, 60) + 'px)';
+      if (ptrText) ptrText.textContent = pull > 60 ? '松开刷新' : '下拉刷新';
+    }
+  }, { passive: true });
+  document.addEventListener('touchend', () => {
+    if (!pulling) return;
+    const trigger = pull > 60;
+    pulling = false;
+    if (!trigger) {
+      indicator.classList.remove('pull');
+      indicator.style.transform = '';
+      pull = 0; return;
+    }
+    indicator.classList.remove('pull');
+    indicator.classList.add('loading');
+    indicator.style.transform = 'translateX(-50%) translateY(50px)';
+    if (ptrText) ptrText.textContent = '正在同步…';
+    pullFromGist(false).finally(() => {
+      indicator.classList.remove('loading');
+      indicator.style.transform = '';
+    });
+    pull = 0;
+  });
+})();
+
+// On-open silent Gist pull
+window.addEventListener('load', function() {
+  const s = state.settings;
+  if (s.gistToken && s.gistId) {
+    showSync('', '正在从云端同步…');
+    pullFromGist(true);
+  }
+});
+
 renderTabbar();
 renderAll();
+updateTradeFab();

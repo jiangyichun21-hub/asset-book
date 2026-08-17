@@ -128,8 +128,27 @@ function renderList() {
   }).join('');
   var cnt = document.getElementById('trade-count');
   if (cnt) cnt.textContent = '\u5171 ' + list.length + ' \u7b14';
+  var pressTimer = null, pressed = false;
+  function startPress(card) {
+    pressed = false;
+    pressTimer = setTimeout(function() {
+      pressed = true;
+      if (navigator.vibrate) navigator.vibrate(20);
+      var ev = new CustomEvent('trade-longpress', { detail: { idx: card.dataset.idx } });
+      document.dispatchEvent(ev);
+    }, 450);
+  }
+  function endPress() { clearTimeout(pressTimer); }
   el.querySelectorAll('.trade-card').forEach(function(card) {
+    card.addEventListener('touchstart', function() { startPress(card); }, { passive: true });
+    card.addEventListener('touchend', endPress);
+    card.addEventListener('touchcancel', endPress);
+    card.addEventListener('touchmove', endPress);
+    card.addEventListener('mousedown', function() { startPress(card); });
+    card.addEventListener('mouseup', endPress);
+    card.addEventListener('mouseleave', endPress);
     card.addEventListener('click', function() {
+      if (pressed) { pressed = false; return; }
       var d = document.getElementById('td-' + card.dataset.idx);
       if (d) d.classList.toggle('open');
     });
@@ -308,13 +327,74 @@ function getExportData() { return state; }
 function importData(d) { state = d; save(); }
 function getRecordCount() { return state.records ? state.records.length : 0; }
 
+// ===== CRUD =====
+function getRecordByFilteredIdx(idx) {
+  var list = getFiltered();
+  return list[idx] || null;
+}
+function findStateIdx(r) {
+  // Match by identity first (same object reference from state.records)
+  var i = state.records.indexOf(r);
+  if (i >= 0) return i;
+  // Fallback: match by buyOrderNo+date+name
+  for (var k = 0; k < state.records.length; k++) {
+    var x = state.records[k];
+    if (x.buyOrderNo === r.buyOrderNo && x.date === r.date && x.name === r.name) return k;
+  }
+  return -1;
+}
+function addRecord(rec) {
+  rec.refunded = !!rec.refunded;
+  state.records.unshift(rec);
+  save();
+}
+function updateRecord(oldRec, patch) {
+  var i = findStateIdx(oldRec);
+  if (i < 0) return false;
+  Object.assign(state.records[i], patch);
+  save();
+  return true;
+}
+function deleteRecord(rec) {
+  var i = findStateIdx(rec);
+  if (i < 0) return false;
+  state.records.splice(i, 1);
+  save();
+  return true;
+}
+function markShipped(rec, v) { return updateRecord(rec, { shipped: v }); }
+function markPaid(rec, v) { return updateRecord(rec, { paid: v }); }
+function markRefunded(rec, v) {
+  var patch = { refunded: v };
+  if (v) { patch.shipped = false; patch.paid = false; }
+  return updateRecord(rec, patch);
+}
+function refresh() {
+  if (tab === 'ledger') { renderSummary(); renderList(); }
+  else if (tab === 'bills') renderBills();
+  else if (tab === 'analytics') renderChart();
+}
+function reload() {
+  state = load();
+  refresh();
+}
+
 return {
   render: render,
   switchTab: switchTradeTab,
   getExportData: getExportData,
   importData: importData,
   getRecordCount: getRecordCount,
-  save: save
+  save: save,
+  getRecordByFilteredIdx: getRecordByFilteredIdx,
+  addRecord: addRecord,
+  updateRecord: updateRecord,
+  deleteRecord: deleteRecord,
+  markShipped: markShipped,
+  markPaid: markPaid,
+  markRefunded: markRefunded,
+  refresh: refresh,
+  reload: reload
 };
 
 })();
