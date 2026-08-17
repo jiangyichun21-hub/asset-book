@@ -1,6 +1,7 @@
 /* global Core, Gist */
 'use strict';
 const LS_KEY = 'assetbook.v1';
+const BUILD_ID = '202608171543';
 const $ = sel => document.querySelector(sel);
 
 let state = loadState();
@@ -345,7 +346,7 @@ function renderSettings() {
     '<button class="btn" id="btn-export">导出 JSON</button>' +
     '<button class="btn" id="btn-import">导入 JSON</button></div>' +
     '<input id="file-import" type="file" accept=".json,application/json" hidden></div>' +
-    '<div class="card muted small center">资产本 v1 · ' + state.accounts.length + ' 个账户 · ' +
+    '<div class="card muted small center">资产本 · 版本 ' + BUILD_ID + ' · ' + state.accounts.length + ' 个账户 · ' +
     state.snapshots.length + ' 条快照</div>';
 
   $('#btn-back').onclick = closeSettings;
