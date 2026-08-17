@@ -288,7 +288,7 @@ function renderSettings() {
     (archived.length ? '<div class="card"><h3>已归档账户</h3>' + archived.map(a =>
       '<div class="row"><span class="grow">' + a.icon + ' ' + esc(a.name) + '</span>' +
       '<button class="btn small g-restore" data-id="' + a.id + '">恢复</button></div>').join('') + '</div>' : '') +
-    '<div class="card"><h3>Gist 自动备份</h3>' +
+    '<div class="card"><h3>Gist 自动备份<span id="gist-status" class="badge"></span></h3>' +
     '<div class="muted small">在 github.com/settings/tokens 创建 fine-grained token，仅勾选 Gists 读写权限</div>' +
     '<input id="in-token" type="password" placeholder="GitHub Token" value="' + esc(s.gistToken) + '">' +
     '<input id="in-pass" type="password" placeholder="加密口令（可选，留空为明文备份）" value="' + esc(s.passphrase) + '">' +
@@ -357,12 +357,13 @@ function renderSettings() {
 // ---------- 备份引擎 ----------
 let backupTimer = 0;
 function setBadge(txt, cls) {
-  const b = $('#backup-badge');
+  const b = $('#gist-status');
+  if (!b) return;
   b.textContent = txt; b.className = 'badge' + (cls ? ' ' + cls : '');
 }
 function renderBadge() {
   const s = state.settings;
-  if (!s.gistToken) { setBadge(''); return; }
+  if (!s.gistToken) { setBadge('未配置'); return; }
   if (backupTimer) setBadge('待备份', 'warn');
   else if (s.lastBackupStatus === 'fail') setBadge('备份失败', 'bad');
   else if (s.lastBackupAt) setBadge('已备份', 'ok');

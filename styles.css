@@ -15,10 +15,12 @@ body { max-width: 520px; margin: 0 auto; padding-bottom: calc(72px + env(safe-ar
 .up { color: var(--up); }
 .down { color: var(--down); }
 
-#topbar { position: sticky; top: 0; z-index: 10; display: flex; align-items: center;
+#topbar { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; justify-content: space-between;
   padding: calc(8px + env(safe-area-inset-top)) 12px 8px; background: var(--bg); }
-#topbar h1 { flex: 1; text-align: center; font-size: 17px; }
+#topbar h1 { position: absolute; left: 0; right: 0; text-align: center; font-size: 17px; pointer-events: none; font-weight: 600; }
 .topbar-right { display: flex; align-items: center; gap: 6px; }
+.card h3 { display: flex; align-items: center; gap: 8px; }
+.card h3 .badge { margin-left: auto; }
 .icon-btn { border: 0; background: none; font-size: 20px; padding: 6px; cursor: pointer; color: var(--text); }
 .icon-btn .ico { width: 21px; height: 21px; display: block; }
 .row .icon-btn .ico { width: 16px; height: 16px; color: var(--muted); }
