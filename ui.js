@@ -172,8 +172,47 @@ function openAccountModal(accountId) {
   };
 }
 
-// ---------- 占位函数（后续任务替换为完整实现）----------
-function startInventory() { alert('Task 8 实现'); }              // Task 8 替换
+// ---------- 盘点模式 ----------
+function startInventory() {
+  const accts = [];
+  for (const g of state.groups.slice().sort((a, b) => a.order - b.order))
+    for (const a of Core.activeAccounts(state).filter(x => x.groupId === g.id)) accts.push(a);
+  if (!accts.length) { alert('还没有账户'); return; }
+  const totalBefore = Core.totalAssets(state);
+  let idx = 0;
+  const step = () => {
+    if (idx >= accts.length) {
+      const totalAfter = Core.totalAssets(state);
+      const diff = Core.round2(totalAfter - totalBefore);
+      openModal('<h3 class="center">盘点完成</h3>' +
+        '<div class="total-num center">' + fmtMoney(totalAfter) + '</div>' +
+        '<div class="center ' + (diff >= 0 ? 'up' : 'down') + '">较盘点前 ' +
+        (diff >= 0 ? '+' : '-') + fmtMoney(Math.abs(diff)) + '</div>' +
+        '<div class="btn-row"><button class="btn primary" id="btn-inv-done">完成</button></div>');
+      $('#btn-inv-done').onclick = closeModal;
+      persist();
+      return;
+    }
+    const a = accts[idx];
+    openModal('<div class="muted small">盘点进度 ' + (idx + 1) + '/' + accts.length + '</div>' +
+      '<h3>' + a.icon + ' ' + esc(a.name) + '</h3>' +
+      '<div class="muted">上次余额：' + fmtMoney(Core.currentBalance(state, a.id)) + '</div>' +
+      '<input id="inv-balance" type="number" inputmode="decimal" step="0.01" min="0" placeholder="输入最新余额（留空则跳过）">' +
+      '<div class="btn-row"><button class="btn" id="inv-skip">跳过</button>' +
+      '<button class="btn primary" id="inv-next">下一个</button></div>');
+    $('#inv-balance').focus();
+    $('#inv-skip').onclick = () => { idx++; step(); };
+    $('#inv-next').onclick = () => {
+      const v = $('#inv-balance').value;
+      if (v !== '') {
+        try { Core.addSnapshot(state, a.id, v); saveState(); }
+        catch (e) { alert(e.message); return; }
+      }
+      idx++; step();
+    };
+  };
+  step();
+}
 function renderTrend() { $('#view-trend').innerHTML = '<div class="card muted center">Task 9 实现</div>'; } // Task 9 替换
 function openSettings() { alert('Task 10 实现'); }               // Task 10 替换
 function renderSettings() {}                                      // Task 10 替换
