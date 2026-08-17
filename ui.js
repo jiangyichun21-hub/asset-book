@@ -213,7 +213,43 @@ function startInventory() {
   };
   step();
 }
-function renderTrend() { $('#view-trend').innerHTML = '<div class="card muted center">Task 9 实现</div>'; } // Task 9 替换
+// ---------- 趋势 ----------
+const RANGES = [{ label: '1月', days: 30 }, { label: '3月', days: 90 },
+                { label: '1年', days: 365 }, { label: '全部', days: 0 }];
+function renderTrend() {
+  const series = Core.dailySeries(state, { days: trendRange, accountId: trendAccount || null });
+  const stats = Core.rangeStats(series);
+  let html = '<div class="card">' +
+    '<div class="btn-row seg">' + RANGES.map(r =>
+      '<button class="btn seg-btn' + (r.days === trendRange ? ' on' : '') + '" data-days="' + r.days + '">' + r.label + '</button>').join('') + '</div>' +
+    '<select id="trend-acct"><option value="">全部账户</option>' +
+    Core.activeAccounts(state).map(a =>
+      '<option value="' + a.id + '"' + (a.id === trendAccount ? ' selected' : '') + '>' + esc(a.name) + '</option>').join('') +
+    '</select>';
+  if (!series.length) {
+    html += '<div class="muted center" style="padding:30px 0">暂无数据，先去记录余额吧</div></div>';
+  } else {
+    const pctTxt = stats.pct === null ? '' : '（' + (stats.diff >= 0 ? '+' : '') + stats.pct + '%）';
+    html += '<div class="stats"><span class="num big">' + fmtMoney(stats.end) + '</span>' +
+      '<span class="' + (stats.diff >= 0 ? 'up' : 'down') + '">' +
+      (stats.diff >= 0 ? '+' : '-') + fmtMoney(Math.abs(stats.diff)) + pctTxt + '</span></div>' +
+      '<svg viewBox="0 0 320 200" class="chart" preserveAspectRatio="none">' +
+      '<path d="' + Core.svgPath(series, 320, 200, 8) + '" fill="none" stroke="#4f6ef7" stroke-width="2"/></svg>' +
+      '<div class="row muted small"><span class="grow">' + series[0].day + '</span>' +
+      '<span>' + series[series.length - 1].day + '</span></div></div>';
+    if (trendAccount) {
+      const list = Core.snapshotsOf(state, trendAccount).slice().reverse().slice(0, 20);
+      html += '<div class="card"><h3 class="small muted">最近快照</h3>' + list.map(s =>
+        '<div class="row"><span class="grow small">' + new Date(s.at).toLocaleString('zh-CN') + '</span>' +
+        '<span class="num">' + fmtMoney(s.balance) + '</span></div>').join('') + '</div>';
+    }
+  }
+  $('#view-trend').innerHTML = html;
+  document.querySelectorAll('#view-trend .seg-btn').forEach(b => {
+    b.onclick = () => { trendRange = Number(b.dataset.days); renderTrend(); };
+  });
+  $('#trend-acct').onchange = e => { trendAccount = e.target.value; renderTrend(); };
+}
 function openSettings() { alert('Task 10 实现'); }               // Task 10 替换
 function renderSettings() {}                                      // Task 10 替换
 function scheduleBackup() {}                                      // Task 10 替换
