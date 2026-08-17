@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>资产本</title>
+<meta name="theme-color" content="#f5f6f8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="资产本">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<header id="topbar">
+  <button id="btn-settings" class="icon-btn" title="设置">⚙️</button>
+  <h1 id="title">资产</h1>
+  <div class="topbar-right">
+    <span id="backup-badge" class="badge"></span>
+    <button id="btn-eye" class="icon-btn" title="隐藏金额">👁</button>
+  </div>
+</header>
+<main>
+  <section id="view-assets" class="view"></section>
+  <section id="view-trend" class="view hidden"></section>
+  <section id="view-settings" class="view hidden"></section>
+</main>
+<nav id="tabbar">
+  <button data-tab="assets" class="tab active">资产</button>
+  <button id="btn-add" class="fab" title="添加账户">＋</button>
+  <button data-tab="trend" class="tab">趋势</button>
+</nav>
+<div id="modal-root"></div>
+<script src="./core.js"></script>
+<script src="./gist.js"></script>
+<script src="./ui.js"></script>
+<script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');</script>
+</body>
+</html>
