@@ -1,4 +1,4 @@
-const VERSION = 'assetbook-v4';
+const VERSION = 'assetbook-v5';
 const ASSETS = ['./', './index.html', './styles.css', './core.js', './gist.js', './ui.js',
                 './manifest.json', './icons/icon-192.png', './icons/icon-512.png',
                 './icons/apple-touch-icon.png'];

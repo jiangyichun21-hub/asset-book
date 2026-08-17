@@ -335,6 +335,9 @@ function renderSettings() {
     '<div class="muted small">' + (s.lastBackupAt
       ? '上次备份：' + new Date(s.lastBackupAt).toLocaleString('zh-CN') + (s.lastBackupStatus === 'ok' ? ' ✓' : ' ✗')
       : '尚未备份') + '</div>' +
+    (s.lastBackupStatus === 'fail' && s.lastBackupError
+      ? '<div class="hint small" style="margin-top:6px;padding:6px 10px;border-radius:8px">错误：' + esc(s.lastBackupError) + '</div>'
+      : '') +
     '<div class="btn-row"><button class="btn" id="btn-save-backup">保存配置</button>' +
     '<button class="btn" id="btn-backup-now">立即备份</button>' +
     '<button class="btn" id="btn-restore">从备份恢复</button></div></div>' +
@@ -375,7 +378,7 @@ function renderSettings() {
   $('#btn-backup-now').onclick = () => {
     state.settings.gistToken = $('#in-token').value.trim();
     state.settings.passphrase = $('#in-pass').value;
-    saveState(); doBackup();
+    saveState(); doBackup(true);
   };
   $('#btn-restore').onclick = restoreFromGist;
   $('#btn-export').onclick = exportJSON;
@@ -416,19 +419,23 @@ function scheduleBackup() {
   backupTimer = setTimeout(doBackup, 3000);
   renderBadge();
 }
-async function doBackup() {
+async function doBackup(isManual) {
   backupTimer = 0;
   const s = state.settings;
-  if (!s.gistToken) return;
+  if (!s.gistToken) { if (isManual) alert('请先在下方填入 GitHub Token 并保存'); return; }
   try {
     setBadge('备份中…', 'warn');
     let content = Core.exportData(state);
     if (s.passphrase) content = await Core.encryptText(content, s.passphrase);
     const id = await Gist.pushBackup({ token: s.gistToken, gistId: s.gistId, content });
-    s.gistId = id; s.lastBackupAt = Date.now(); s.lastBackupStatus = 'ok';
+    s.gistId = id; s.lastBackupAt = Date.now(); s.lastBackupStatus = 'ok'; s.lastBackupError = '';
     saveState(); renderBadge();
+    if (isManual) alert('备份成功');
   } catch (e) {
-    s.lastBackupStatus = 'fail'; saveState(); renderBadge();
+    s.lastBackupStatus = 'fail'; s.lastBackupError = e && e.message ? e.message : String(e);
+    saveState(); renderBadge();
+    console.error('backup failed', e);
+    if (isManual) alert('备份失败：' + s.lastBackupError);
   }
 }
 async function restoreFromGist() {
