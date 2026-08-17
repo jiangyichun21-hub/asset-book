@@ -1,7 +1,7 @@
 /* global Core, Gist */
 'use strict';
 const LS_KEY = 'assetbook.v1';
-const BUILD_ID = '202608171551';
+const BUILD_ID = '202608171717';
 const $ = sel => document.querySelector(sel);
 
 let state = loadState();
@@ -34,7 +34,8 @@ const SVG_PATHS = {
   eyeOff: '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>',
   pencil: '<path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>',
   x: '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
-  grip: '<line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/>'
+  grip: '<line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/>',
+  arrowLeft: '<line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>'
 };
 function svgIcon(name) {
   return '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"' +
@@ -100,12 +101,28 @@ function switchTab(tab) {
   renderAll();
 }
 function renderAll() {
-  const eye = $('#btn-eye');
-  eye.innerHTML = svgIcon(state.settings.hideAmounts ? 'eyeOff' : 'eye');
-  eye.title = state.settings.hideAmounts ? '显示金额' : '隐藏金额';
+  syncTopbar();
   if (!$('#view-settings').classList.contains('hidden')) { renderSettings(); renderBadge(); return; }
   if (currentTab === 'assets') renderAssets(); else renderTrend();
   renderBadge();
+}
+function syncTopbar() {
+  const inSettings = !$('#view-settings').classList.contains('hidden');
+  const nav = $('#btn-settings');
+  const eye = $('#btn-eye');
+  if (inSettings) {
+    nav.innerHTML = svgIcon('arrowLeft');
+    nav.title = '返回';
+    nav.onclick = closeSettings;
+    eye.classList.add('hidden');
+  } else {
+    nav.innerHTML = svgIcon('gear');
+    nav.title = '设置';
+    nav.onclick = openSettings;
+    eye.classList.remove('hidden');
+    eye.innerHTML = svgIcon(state.settings.hideAmounts ? 'eyeOff' : 'eye');
+    eye.title = state.settings.hideAmounts ? '显示金额' : '隐藏金额';
+  }
 }
 
 // ---------- 资产总览 ----------
@@ -317,7 +334,6 @@ function renderSettings() {
   const s = state.settings;
   const archived = state.accounts.filter(a => a.archived);
   $('#view-settings').innerHTML =
-    '<button class="btn block" id="btn-back">← 返回</button>' +
     '<div class="card"><h3>分组管理<span class="muted small" style="margin-left:auto;font-weight:normal">拖拽排序</span></h3>' +
     state.groups.slice().sort((a, b) => a.order - b.order).map(g =>
       '<div class="row group-item" data-id="' + g.id + '">' +
@@ -349,7 +365,6 @@ function renderSettings() {
     '<div class="card muted small center">资产本 · 版本 ' + BUILD_ID + ' · ' + state.accounts.length + ' 个账户 · ' +
     state.snapshots.length + ' 条快照</div>';
 
-  $('#btn-back').onclick = closeSettings;
   $('#btn-add-group').onclick = () => {
     const name = prompt('分组名称'); if (!name) return;
     try { Core.addGroup(state, name); persist(); } catch (e) { alert(e.message); }
@@ -479,7 +494,6 @@ async function exportJSON() {
 
 // ---------- 启动 ----------
 $('#btn-eye').onclick = () => { state.settings.hideAmounts = !state.settings.hideAmounts; saveState(); renderAll(); };
-$('#btn-settings').onclick = () => openSettings();
 $('#btn-add').onclick = () => openAccountModal(null);
 document.querySelectorAll('#tabbar .tab').forEach(b => { b.onclick = () => switchTab(b.dataset.tab); });
 renderAll();
