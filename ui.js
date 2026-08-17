@@ -1,7 +1,7 @@
 /* global Core, Gist, Trades */
 'use strict';
 const LS_KEY = 'assetbook.v1';
-const BUILD_ID = '202608171930';
+const BUILD_ID = '202608171950';
 const $ = sel => document.querySelector(sel);
 
 let state = loadState();
@@ -93,6 +93,33 @@ function openModal(html) {
 function closeModal() { $('#modal-root').innerHTML = ''; }
 
 // ---------- 视图切换 ----------
+let currentTradeTab = 'ledger'; // ledger | bills | analytics
+
+function renderTabbar() {
+  const bar = $('#tabbar');
+  if (currentView === 'asset') {
+    bar.innerHTML =
+      '<button data-tab="assets" class="tab' + (currentTab === 'assets' ? ' active' : '') + '">资产</button>' +
+      '<button id="btn-add" class="fab" title="添加账户">＋</button>' +
+      '<button data-tab="trend" class="tab' + (currentTab === 'trend' ? ' active' : '') + '">趋势</button>';
+    $('#btn-add').onclick = () => openAccountModal(null);
+    bar.querySelectorAll('.tab').forEach(b => { b.onclick = () => switchTab(b.dataset.tab); });
+  } else if (currentView === 'trade') {
+    const t = currentTradeTab;
+    bar.innerHTML =
+      '<button data-ttab="ledger" class="tab' + (t === 'ledger' ? ' active' : '') + '">记账本</button>' +
+      '<button data-ttab="bills" class="tab' + (t === 'bills' ? ' active' : '') + '">账单</button>' +
+      '<button data-ttab="analytics" class="tab' + (t === 'analytics' ? ' active' : '') + '">数据分析</button>';
+    bar.querySelectorAll('.tab').forEach(b => {
+      b.onclick = () => {
+        currentTradeTab = b.dataset.ttab;
+        bar.querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x === b));
+        Trades.switchTab(currentTradeTab);
+      };
+    });
+  }
+}
+
 function switchTab(tab) {
   currentTab = tab;
   document.querySelectorAll('#tabbar .tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
@@ -113,12 +140,13 @@ function switchView(view) {
   if (view === 'asset') {
     $('#view-assets').classList.toggle('hidden', currentTab !== 'assets');
     $('#view-trend').classList.toggle('hidden', currentTab !== 'trend');
-    $('#tabbar').classList.remove('hidden');
   } else if (view === 'trade') {
     $('#view-trade').classList.remove('hidden');
-    $('#tabbar').classList.add('hidden');
     Trades.render();
+    Trades.switchTab(currentTradeTab);
   }
+  $('#tabbar').classList.remove('hidden');
+  renderTabbar();
   // Update title
   var titles = { asset: '资产', trade: '买卖记账' };
   $('#title').textContent = titles[view] || view;
@@ -615,8 +643,6 @@ async function exportJSON() {
 // ---------- 启动 ----------
 $('#btn-eye').onclick = () => { state.settings.hideAmounts = !state.settings.hideAmounts; saveState(); renderAll(); };
 $('#btn-settings').onclick = openSettings;
-$('#btn-add').onclick = () => openAccountModal(null);
-document.querySelectorAll('#tabbar .tab').forEach(b => { b.onclick = () => switchTab(b.dataset.tab); });
 
 // Title dropdown navigation
 (function() {
@@ -632,4 +658,5 @@ document.querySelectorAll('#tabbar .tab').forEach(b => { b.onclick = () => switc
   });
 })();
 
+renderTabbar();
 renderAll();
