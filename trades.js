@@ -171,6 +171,7 @@ function renderBills() {
   // Repayments
   var dazhuangCost = 0;
   state.records.forEach(function(r) {
+    if (r.refunded) return;
     if (r.platform === '\u5927\u58ee\u6dd8\u5b9d' || r.platform === '137\u6296\u97f3') dazhuangCost += r.buyPrice;
   });
   var repaid = 0;
@@ -178,11 +179,12 @@ function renderBills() {
   var remaining = dazhuangCost - repaid;
 
   var rHtml = '<table class="bill-table"><thead><tr><th>\u8d39\u7528</th><th style="text-align:right">\u91d1\u989d</th></tr></thead><tbody>';
-  rHtml += '<tr><td>\u5927\u58ee\u6dd8\u5b9d \u603b\u6210\u672c</td><td style="text-align:right">'+fmt(dazhuangCost)+'</td></tr>';
+  rHtml += '<tr><td>\u5927\u58ee\u6210\u672c\u603b\u91d1\u989d\uff08\u5927\u58ee\u6dd8\u5b9d+137\u6296\u97f3\uff09</td><td style="text-align:right">'+fmt(dazhuangCost)+'</td></tr>';
   (state.repayments || []).forEach(function(r) {
-    rHtml += '<tr><td>\u5df2\u8fd8\u6b3e - '+esc(r.content)+'</td><td style="text-align:right;color:var(--green)">-'+fmt(r.amount)+'</td></tr>';
+    var label = (r.date ? esc(r.date) + ' · ' : '') + '\u5df2\u8fd8\u6b3e';
+    rHtml += '<tr><td>'+label+'</td><td style="text-align:right;color:var(--down)">-'+fmt(r.amount)+'</td></tr>';
   });
-  rHtml += '<tr style="font-weight:700"><td>\u5269\u4f59\u672a\u8fd8</td><td style="text-align:right;color:'+(remaining>0?'var(--red)':'var(--green)')+'">'+fmt(remaining)+'</td></tr></tbody></table>';
+  rHtml += '<tr style="font-weight:700"><td>\u5269\u4f59\u8fd8\u6b3e</td><td style="text-align:right;color:'+(remaining>0?'var(--up)':'var(--down)')+'">'+fmt(remaining)+'</td></tr></tbody></table>';
   var rEl = document.getElementById('trade-bills-repay');
   if (rEl) rEl.innerHTML = rHtml;
 }

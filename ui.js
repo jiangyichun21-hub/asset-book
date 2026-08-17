@@ -1,7 +1,7 @@
 /* global Core, Gist, Trades */
 'use strict';
 const LS_KEY = 'assetbook.v1';
-const BUILD_ID = '202608172359';
+const BUILD_ID = '202608180010';
 const $ = sel => document.querySelector(sel);
 
 let state = loadState();
