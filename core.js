@@ -168,7 +168,14 @@
 
   // ---------- 导出/导入 ----------
   function exportData(state) {
-    return JSON.stringify({ app: 'asset-book', version: SCHEMA, exportedAt: Date.now(), data: state }, null, 2);
+    // Strip sensitive credentials so the PAT never leaks into Gist/backup files
+    // (GitHub secret scanning would otherwise detect and revoke the token).
+    var safe = JSON.parse(JSON.stringify(state));
+    if (safe && safe.settings) {
+      delete safe.settings.gistToken;
+      delete safe.settings.passphrase;
+    }
+    return JSON.stringify({ app: 'asset-book', version: SCHEMA, exportedAt: Date.now(), data: safe }, null, 2);
   }
   function importData(json) {
     const obj = typeof json === 'string' ? JSON.parse(json) : json;
