@@ -1,7 +1,7 @@
 /* global Core, Gist, Trades */
 'use strict';
 const LS_KEY = 'assetbook.v1';
-const BUILD_ID = '202608171842';
+const BUILD_ID = '202608171930';
 const $ = sel => document.querySelector(sel);
 
 let state = loadState();
@@ -519,42 +519,82 @@ async function doBackup(isManual) {
     if (isManual) alert('备份失败：' + s.lastBackupError);
   }
 }
+async function parseBackupContent(content, pass) {
+  // Parse a backup file content, handling v2 bundled, v1 legacy, and encrypted variants.
+  // Returns { data, trades } where data is asset state and trades is trade JSON string (or null).
+  let raw;
+  try { raw = JSON.parse(content); } catch (_) { raw = null; }
+  if (raw && raw.v === 2 && raw.assets) {
+    return { data: Core.importData(raw.assets), trades: raw.trades || null };
+  }
+  try {
+    return { data: Core.importData(content), trades: null };
+  } catch (_) {
+    if (!pass) throw new Error('数据已加密，需要口令');
+    const dec = await Core.decryptText(content, pass);
+    let raw2; try { raw2 = JSON.parse(dec); } catch (_) { raw2 = null; }
+    if (raw2 && raw2.v === 2 && raw2.assets) {
+      return { data: Core.importData(raw2.assets), trades: raw2.trades || null };
+    }
+    return { data: Core.importData(dec), trades: null };
+  }
+}
 async function restoreFromGist() {
   const token = ($('#in-token') ? $('#in-token').value.trim() : '') || state.settings.gistToken;
   if (!token) { alert('请先填写 Token'); return; }
-  const gistId = state.settings.gistId ||
-    prompt('输入备份 Gist ID（gist.github.com 上备份地址最后一段）');
-  if (!gistId) return;
+  const pass = ($('#in-pass') && $('#in-pass').value) || state.settings.passphrase || '';
   try {
-    let content = await Gist.fetchBackup(token, gistId);
-    let raw;
-    try { raw = JSON.parse(content); } catch (_) { raw = null; }
-    // v2 format: { v:2, assets:..., trades:... }
-    let data;
-    if (raw && raw.v === 2 && raw.assets) {
-      data = Core.importData(raw.assets);
-      if (raw.trades) localStorage.setItem('assetbook.trades', raw.trades);
-    } else {
-      // Try v1 (legacy) format
-      try { data = Core.importData(content); }
-      catch (e1) {
-        const pw = ($('#in-pass') && $('#in-pass').value) || prompt('数据已加密，输入加密口令');
-        if (!pw) return;
-        content = await Core.decryptText(content, pw);
-        try {
-          raw = JSON.parse(content);
-          if (raw && raw.v === 2 && raw.assets) {
-            data = Core.importData(raw.assets);
-            if (raw.trades) localStorage.setItem('assetbook.trades', raw.trades);
-          } else { data = Core.importData(content); }
-        } catch (_) { data = Core.importData(content); }
+    // Step 1: list all backups
+    const list = await Gist.listBackups(token);
+    if (!list.length) { alert('未找到任何备份'); return; }
+
+    // Step 2: probe each backup to get account/snapshot counts
+    const probes = [];
+    for (const g of list) {
+      try {
+        const content = await Gist.fetchBackup(token, g.id);
+        const parsed = await parseBackupContent(content, pass);
+        probes.push({
+          id: g.id, updatedAt: g.updatedAt,
+          accounts: parsed.data.accounts.length,
+          snapshots: parsed.data.snapshots.length,
+          content: content
+        });
+      } catch (e) {
+        probes.push({ id: g.id, updatedAt: g.updatedAt, error: e.message });
       }
     }
-    if (!confirm('将用备份覆盖当前数据（' + data.accounts.length + ' 个账户，' +
-      data.snapshots.length + ' 条快照），确定？')) return;
-    state = data;
-    state.settings.gistToken = token; state.settings.gistId = gistId;
-    saveState(); alert('恢复成功'); closeSettings();
+
+    // Step 3: pick target
+    let target;
+    const nonEmpty = probes.filter(p => !p.error && (p.accounts > 0 || p.snapshots > 0));
+    if (nonEmpty.length === 0) {
+      alert('所有备份都是空的（0 个账户 0 条快照）'); return;
+    } else if (nonEmpty.length === 1) {
+      target = nonEmpty[0];
+      if (!confirm('找到 1 个有数据的备份：\n' + new Date(target.updatedAt).toLocaleString('zh-CN') +
+        '\n账户 ' + target.accounts + ' 个，快照 ' + target.snapshots + ' 条\n\n是否恢复？')) return;
+    } else {
+      // Multiple non-empty backups: show picker
+      const opts = nonEmpty.map((p, i) =>
+        (i + 1) + '. ' + new Date(p.updatedAt).toLocaleString('zh-CN') +
+        ' - ' + p.accounts + '账户 ' + p.snapshots + '快照').join('\n');
+      const ans = prompt('找到 ' + nonEmpty.length + ' 个有数据的备份，输入序号选择（默认 1 = 最新）：\n' + opts, '1');
+      if (ans === null) return;
+      const idx = Math.max(1, Math.min(nonEmpty.length, parseInt(ans) || 1)) - 1;
+      target = nonEmpty[idx];
+    }
+
+    // Step 4: apply
+    const parsed = await parseBackupContent(target.content, pass);
+    state = parsed.data;
+    state.settings.gistToken = token;
+    state.settings.gistId = target.id;
+    if (parsed.trades) localStorage.setItem('assetbook.trades', parsed.trades);
+    saveState();
+    alert('恢复成功：' + parsed.data.accounts.length + ' 个账户，' +
+      parsed.data.snapshots.length + ' 条快照');
+    closeSettings();
   } catch (e) { alert('恢复失败：' + e.message); }
 }
 async function exportJSON() {

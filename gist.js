@@ -45,5 +45,15 @@
     try { return await updateBackup(opts.token, opts.gistId, opts.content, opts.fetchImpl); }
     catch (e) { if (e.notFound) return createBackup(opts.token, opts.content, opts.fetchImpl); throw e; }
   }
-  return { FILE, createBackup, updateBackup, fetchBackup, pushBackup };
+  async function listBackups(token, fetchImpl) {
+    const f = fetchImpl || fetch;
+    const res = await f(API + '/gists?per_page=100', { headers: headers(token) });
+    if (!res.ok) throw new Error('列出 Gist 失败: HTTP ' + res.status);
+    const arr = await res.json();
+    return arr
+      .filter(g => g.files && g.files[FILE])
+      .map(g => ({ id: g.id, updatedAt: g.updated_at, description: g.description || '' }))
+      .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+  }
+  return { FILE, createBackup, updateBackup, fetchBackup, pushBackup, listBackups };
 });
