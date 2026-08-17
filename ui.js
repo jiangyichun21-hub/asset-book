@@ -1,7 +1,7 @@
 /* global Core, Gist, Trades */
 'use strict';
 const LS_KEY = 'assetbook.v1';
-const BUILD_ID = '202608171838';
+const BUILD_ID = '202608171842';
 const $ = sel => document.querySelector(sel);
 
 let state = loadState();
@@ -139,15 +139,18 @@ function syncTopbar() {
   const inSettings = !$('#view-settings').classList.contains('hidden');
   const nav = $('#btn-settings');
   const eye = $('#btn-eye');
+  const arrow = $('.title-btn .arrow');
   if (inSettings) {
     nav.innerHTML = svgIcon('arrowLeft');
     nav.title = '返回';
     nav.onclick = closeSettings;
     eye.classList.add('hidden');
+    if (arrow) arrow.style.display = 'none';
   } else {
     nav.innerHTML = svgIcon('gear');
     nav.title = '设置';
     nav.onclick = openSettings;
+    if (arrow) arrow.style.display = '';
     // Eye only visible on asset view
     if (currentView === 'asset') {
       eye.classList.remove('hidden');
@@ -577,12 +580,12 @@ document.querySelectorAll('#tabbar .tab').forEach(b => { b.onclick = () => switc
 
 // Title dropdown navigation
 (function() {
-  var btn = $('.title-btn');
-  var dd = $('.title-dropdown');
+  var wrap = $('#title-wrap');
+  var dd = $('#title-dropdown');
   var overlay = $('#dd-overlay');
-  function toggleDD() { dd.classList.toggle('open'); overlay.classList.toggle('open'); }
-  function closeDD() { dd.classList.remove('open'); overlay.classList.remove('open'); }
-  btn.onclick = toggleDD;
+  function toggleDD() { wrap.classList.toggle('open'); overlay.classList.toggle('open'); }
+  function closeDD() { wrap.classList.remove('open'); overlay.classList.remove('open'); }
+  $('#title-btn').onclick = toggleDD;
   overlay.onclick = closeDD;
   dd.querySelectorAll('.dd-item').forEach(function(item) {
     item.onclick = function() { closeDD(); switchView(item.dataset.view); };
