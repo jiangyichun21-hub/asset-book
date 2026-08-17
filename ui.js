@@ -1,7 +1,7 @@
 /* global Core, Gist, Trades */
 'use strict';
 const LS_KEY = 'assetbook.v1';
-const BUILD_ID = '202608172005';
+const BUILD_ID = '202608172130';
 const $ = sel => document.querySelector(sel);
 
 let state = loadState();
@@ -81,6 +81,31 @@ function endDrag() {
 document.addEventListener('pointerup', endDrag);
 document.addEventListener('pointercancel', endDrag);
 
+// ---------- 滚动锁 ----------
+let scrollLockCount = 0;
+let savedScrollY = 0;
+function lockScroll() {
+  if (++scrollLockCount !== 1) return;
+  savedScrollY = window.scrollY || 0;
+  document.body.classList.add('scroll-locked');
+  document.body.style.position = 'fixed';
+  document.body.style.top = '-' + savedScrollY + 'px';
+  document.body.style.left = '0';
+  document.body.style.right = '0';
+  document.body.style.width = '100%';
+}
+function unlockScroll() {
+  if (scrollLockCount <= 0) { scrollLockCount = 0; return; }
+  if (--scrollLockCount !== 0) return;
+  document.body.classList.remove('scroll-locked');
+  document.body.style.position = '';
+  document.body.style.top = '';
+  document.body.style.left = '';
+  document.body.style.right = '';
+  document.body.style.width = '';
+  window.scrollTo(0, savedScrollY);
+}
+
 // ---------- 弹层 ----------
 function openModal(html) {
   const root = $('#modal-root');
@@ -88,9 +113,20 @@ function openModal(html) {
   root.querySelector('.overlay').addEventListener('click', e => {
     if (e.target.classList.contains('overlay')) closeModal();
   });
+  lockScroll();
+  history.pushState({ ab: 'modal' }, '');
   return root;
 }
-function closeModal() { $('#modal-root').innerHTML = ''; }
+function closeModal() {
+  if (!$('#modal-root').innerHTML) return;
+  if (history.state && history.state.ab === 'modal') { history.back(); return; }
+  closeModalDom();
+}
+function closeModalDom() {
+  if (!$('#modal-root').innerHTML) return;
+  $('#modal-root').innerHTML = '';
+  unlockScroll();
+}
 
 // ---------- 视图切换 ----------
 let currentTradeTab = 'ledger'; // ledger | bills | analytics
@@ -396,8 +432,14 @@ function openSettings() {
   $('#title').textContent = '设置';
   syncTopbar();
   renderSettings();
+  history.pushState({ ab: 'settings' }, '');
 }
-function closeSettings() { switchView(settingsFromView); }
+function closeSettings() {
+  if ($('#view-settings').classList.contains('hidden')) return;
+  if (history.state && history.state.ab === 'settings') { history.back(); return; }
+  closeSettingsDom();
+}
+function closeSettingsDom() { switchView(settingsFromView); }
 
 function renderSettings() {
   const s = state.settings;
@@ -680,14 +722,34 @@ $('#btn-settings').onclick = openSettings;
   var wrap = $('#title-wrap');
   var dd = $('#title-dropdown');
   var overlay = $('#dd-overlay');
-  function toggleDD() { wrap.classList.toggle('open'); overlay.classList.toggle('open'); }
-  function closeDD() { wrap.classList.remove('open'); overlay.classList.remove('open'); }
+  var ddOpen = false;
+  function openDD() {
+    if (ddOpen) return;
+    ddOpen = true;
+    wrap.classList.add('open');
+    overlay.classList.add('open');
+    lockScroll();
+  }
+  function closeDD() {
+    if (!ddOpen) return;
+    ddOpen = false;
+    wrap.classList.remove('open');
+    overlay.classList.remove('open');
+    unlockScroll();
+  }
+  function toggleDD() { ddOpen ? closeDD() : openDD(); }
   $('#title-btn').onclick = toggleDD;
   overlay.onclick = closeDD;
   dd.querySelectorAll('.dd-item').forEach(function(item) {
     item.onclick = function() { closeDD(); switchView(item.dataset.view); };
   });
 })();
+
+// Phone gesture-back: close top-most overlay/second-level page when history pops
+window.addEventListener('popstate', function() {
+  if ($('#modal-root').innerHTML) { closeModalDom(); return; }
+  if (!$('#view-settings').classList.contains('hidden')) { closeSettingsDom(); return; }
+});
 
 renderTabbar();
 renderAll();
