@@ -110,12 +110,69 @@
       .reduce((sum, a) => sum + currentBalance(state, a.id), 0));
   }
 
+  // ---------- 趋势 ----------
+  function startOfDay(ts) { const d = new Date(ts); d.setHours(0, 0, 0, 0); return d.getTime(); }
+  function dayKey(ts) { const d = new Date(ts); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+
+  function dailySeries(state, opts) {
+    opts = opts || {};
+    const now = opts.now || Date.now();
+    const days = opts.days || 0;
+    const accts = opts.accountId
+      ? state.accounts.filter(a => a.id === opts.accountId)
+      : activeAccounts(state);
+    const ids = {};
+    accts.forEach(a => { ids[a.id] = true; });
+    const snaps = state.snapshots.filter(s => ids[s.accountId]).sort((a, b) => a.at - b.at);
+    if (!snaps.length) return [];
+    const end = startOfDay(now);
+    let start = startOfDay(snaps[0].at);
+    if (days > 0 && end - (days - 1) * DAY > start) start = end - (days - 1) * DAY;
+    const series = [];
+    for (let t = start; t <= end; t += DAY) {
+      let total = 0;
+      for (const a of accts) {
+        let bal = 0;
+        for (const s of snaps) {
+          if (s.accountId !== a.id) continue;
+          if (s.at < t + DAY) bal = s.balance; else break;
+        }
+        total += bal;
+      }
+      series.push({ day: dayKey(t), t, total: round2(total) });
+    }
+    return series;
+  }
+
+  function rangeStats(series) {
+    if (!series || !series.length) return null;
+    const start = series[0].total, end = series[series.length - 1].total;
+    const diff = round2(end - start);
+    const pct = start !== 0 ? round2(diff / start * 100) : null;
+    return { start, end, diff, pct };
+  }
+
+  function svgPath(series, w, h, padding) {
+    if (!series || !series.length) return '';
+    const p = padding === undefined ? 4 : padding;
+    const vals = series.map(x => x.total);
+    const min = Math.min.apply(null, vals), max = Math.max.apply(null, vals);
+    const span = (max - min) || 1;
+    const n = series.length;
+    return series.map((pt, i) => {
+      const x = n === 1 ? w / 2 : p + (w - 2 * p) * i / (n - 1);
+      const y = p + (h - 2 * p) * (1 - (pt.total - min) / span);
+      return (i ? 'L' : 'M') + x.toFixed(1) + ' ' + y.toFixed(1);
+    }).join(' ');
+  }
+
   return {
     SCHEMA, DEFAULT_GROUPS, uid, round2, pad,
     createInitialState,
     addGroup, renameGroup, deleteGroup,
     addAccount, updateAccount, setArchived, activeAccounts,
     addSnapshot, deleteSnapshot, snapshotsOf, latestSnapshot,
-    currentBalance, lastUpdatedAt, totalAssets, groupSubtotal
+    currentBalance, lastUpdatedAt, totalAssets, groupSubtotal,
+    dailySeries, rangeStats, svgPath, startOfDay, dayKey
   };
 });

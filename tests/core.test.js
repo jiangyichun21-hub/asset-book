@@ -62,3 +62,38 @@ test('分组小计与分组约束', () => {
   assert.ok(!s.groups.some(x => x.id === g2.id));
   assert.throws(() => Core.addGroup(s, '现金'), /已存在/);       // 重名拒绝
 });
+
+test('dailySeries 按日取最后值并向后结转', () => {
+  const s = Core.createInitialState();
+  const a = Core.addAccount(s, { name: 'A', groupId: s.groups[0].id });
+  const b = Core.addAccount(s, { name: 'B', groupId: s.groups[0].id });
+  const d1 = new Date(2026, 0, 1, 12).getTime();
+  const d2 = new Date(2026, 0, 2, 12).getTime();
+  const d3 = new Date(2026, 0, 3, 12).getTime();
+  Core.addSnapshot(s, a.id, 100, d1);
+  Core.addSnapshot(s, a.id, 120, d1 + 3600000);  // 同日多条取最后
+  Core.addSnapshot(s, b.id, 50, d2);
+  Core.addSnapshot(s, a.id, 200, d3);
+  const series = Core.dailySeries(s, { now: d3 });
+  assert.deepStrictEqual(series.map(p => p.total), [120, 170, 250]);
+  assert.strictEqual(series[0].day, '2026-01-01');
+  const one = Core.dailySeries(s, { accountId: a.id, now: d3 });
+  assert.deepStrictEqual(one.map(p => p.total), [120, 120, 200]);
+  const recent = Core.dailySeries(s, { days: 2, now: d3 });
+  assert.deepStrictEqual(recent.map(p => p.total), [170, 250]);
+  assert.deepStrictEqual(Core.dailySeries(Core.createInitialState(), {}), []);
+});
+
+test('rangeStats 计算涨跌', () => {
+  assert.deepStrictEqual(Core.rangeStats([{ total: 100 }, { total: 150 }]),
+    { start: 100, end: 150, diff: 50, pct: 50 });
+  assert.strictEqual(Core.rangeStats([{ total: 0 }, { total: 10 }]).pct, null);
+  assert.strictEqual(Core.rangeStats([]), null);
+});
+
+test('svgPath 生成折线路径', () => {
+  const d = Core.svgPath([{ total: 0 }, { total: 10 }], 100, 50, 0);
+  assert.strictEqual(d, 'M0.0 50.0 L100.0 0.0');
+  assert.strictEqual(Core.svgPath([], 100, 50), '');
+  assert.ok(Core.svgPath([{ total: 5 }], 100, 50, 0).startsWith('M50'));  // 单点居中
+});
