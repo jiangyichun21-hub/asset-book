@@ -104,6 +104,11 @@
 <script src="./gist.js"></script>
 <script src="./trades.js"></script>
 <script src="./ui.js"></script>
-<script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');</script>
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' })
+    .then(function(reg) { reg.update(); });
+}
+</script>
 </body>
 </html>
