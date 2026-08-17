@@ -15,14 +15,82 @@
 <body>
 <header id="topbar">
   <button id="btn-settings" class="icon-btn" title="设置"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
-  <h1 id="title">资产</h1>
+  <div class="title-wrap" id="title-wrap">
+    <button class="title-btn" id="title-btn">
+      <span id="title">资产</span>
+      <span class="arrow"></span>
+    </button>
+    <div class="title-dropdown" id="title-dropdown">
+      <div class="dd-item active" data-view="asset">
+        <span class="dd-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="18" rx="2"/><line x1="2" y1="9" x2="22" y2="9"/></svg></span>
+        <span>资产</span>
+      </div>
+      <div class="dd-divider"></div>
+      <div class="dd-item" data-view="trade">
+        <span class="dd-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>
+        <span>买卖记账</span>
+      </div>
+    </div>
+  </div>
   <div class="topbar-right">
     <button id="btn-eye" class="icon-btn" title="隐藏金额"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
   </div>
 </header>
+<div id="dd-overlay"></div>
 <main>
   <section id="view-assets" class="view"></section>
   <section id="view-trend" class="view hidden"></section>
+  <section id="view-trade" class="view hidden">
+    <div class="trade-tabs">
+      <button class="trade-tab active" data-ttab="ledger">记账本</button>
+      <button class="trade-tab" data-ttab="bills">账单</button>
+      <button class="trade-tab" data-ttab="analytics">数据分析</button>
+    </div>
+    <div id="trade-ledger">
+      <div class="summary-grid" id="trade-summary"></div>
+      <div class="trade-filter-bar">
+        <div class="trade-filter-toggle" id="trade-filter-toggle"><span>筛选条件</span><span class="ft-arrow">▼</span></div>
+        <div class="trade-filter-body" id="trade-filter-body">
+          <div class="trade-filter-row" style="margin-top:8px"><input type="text" id="f-trade-name" placeholder="搜索商品名"></div>
+          <div class="trade-filter-row"><input type="text" id="f-trade-buyer" placeholder="搜索买家"><input type="text" id="f-trade-order" placeholder="订单号"></div>
+          <div class="trade-filter-row">
+            <select id="f-trade-shipped"><option value="">发货状态</option><option value="yes">已发货</option><option value="no">未发货</option></select>
+            <select id="f-trade-paid"><option value="">回款状态</option><option value="yes">已回款</option><option value="no">未回款</option></select>
+          </div>
+          <div class="trade-filter-row">
+            <select id="f-trade-platform"><option value="">全部平台</option></select>
+          </div>
+          <div class="trade-filter-row"><input type="date" id="f-trade-from" title="开始日期"><input type="date" id="f-trade-to" title="结束日期"></div>
+          <div style="text-align:right;margin-top:4px"><span style="font-size:12px;color:var(--accent);cursor:pointer" id="f-trade-reset">重置筛选</span></div>
+        </div>
+      </div>
+      <div class="trade-list" id="trade-list"></div>
+      <div class="trade-count" id="trade-count"></div>
+    </div>
+    <div id="trade-bills" class="hidden">
+      <div class="card" style="padding:0;overflow:hidden"><div style="padding:12px 16px;border-bottom:1px solid var(--line);font-weight:600;font-size:14px">营销账单</div><div id="trade-bills-marketing"></div></div>
+      <div class="card" style="padding:0;overflow:hidden;margin-top:12px"><div style="padding:12px 16px;border-bottom:1px solid var(--line);font-weight:600;font-size:14px">大壮还款账单</div><div id="trade-bills-repay"></div></div>
+    </div>
+    <div id="trade-analytics" class="hidden">
+      <div class="trade-chart-box">
+        <div class="chart-controls" id="trade-chart-period">
+          <button class="chart-btn active" data-days="7">近7天</button>
+          <button class="chart-btn" data-days="14">近14天</button>
+          <button class="chart-btn" data-days="30">近30天</button>
+          <button class="chart-btn" data-days="0">全部</button>
+        </div>
+        <div class="chart-controls" id="trade-chart-metrics">
+          <button class="chart-btn" data-metric="count">下单次数</button>
+          <button class="chart-btn" data-metric="cost">下单成本</button>
+          <button class="chart-btn" data-metric="revenue">出价</button>
+          <button class="chart-btn" data-metric="spread">差价</button>
+          <button class="chart-btn" data-metric="cps">返现</button>
+          <button class="chart-btn active" data-metric="profit">总利润</button>
+        </div>
+        <div class="chart-canvas-wrap"><canvas id="trade-chart-canvas"></canvas></div>
+      </div>
+    </div>
+  </section>
   <section id="view-settings" class="view hidden"></section>
 </main>
 <nav id="tabbar">
@@ -31,8 +99,10 @@
   <button data-tab="trend" class="tab">趋势</button>
 </nav>
 <div id="modal-root"></div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script src="./core.js"></script>
 <script src="./gist.js"></script>
+<script src="./trades.js"></script>
 <script src="./ui.js"></script>
 <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');</script>
 </body>

@@ -14,7 +14,7 @@
   async function createBackup(token, content, fetchImpl) {
     const f = fetchImpl || fetch;
     const res = await f(API + '/gists', { method: 'POST', headers: headers(token),
-      body: JSON.stringify({ description: 'asset-book 资产本自动备份', public: false,
+      body: JSON.stringify({ description: 'asset-book 资产本自动备份（资产+交易）', public: false,
                              files: { [FILE]: { content } } }) });
     if (!res.ok) throw new Error('创建 Gist 失败: HTTP ' + res.status);
     return (await res.json()).id;

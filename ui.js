@@ -1,11 +1,13 @@
-/* global Core, Gist */
+/* global Core, Gist, Trades */
 'use strict';
 const LS_KEY = 'assetbook.v1';
-const BUILD_ID = '202608171830';
+const BUILD_ID = '202608171838';
 const $ = sel => document.querySelector(sel);
 
 let state = loadState();
 let currentTab = 'assets';
+let currentView = 'asset'; // 'asset' | 'trade'
+let settingsFromView = 'asset'; // remember where settings was opened from
 let trendRange = 90;
 let trendAccount = '';
 
@@ -98,12 +100,38 @@ function switchTab(tab) {
   $('#view-assets').classList.toggle('hidden', tab !== 'assets');
   $('#view-trend').classList.toggle('hidden', tab !== 'trend');
   $('#tabbar').classList.remove('hidden');
-  $('#title').textContent = tab === 'assets' ? '资产' : '趋势';
+  renderAll();
+}
+function switchView(view) {
+  currentView = view;
+  // Hide all views
+  $('#view-assets').classList.add('hidden');
+  $('#view-trend').classList.add('hidden');
+  $('#view-trade').classList.add('hidden');
+  $('#view-settings').classList.add('hidden');
+  // Show correct view
+  if (view === 'asset') {
+    $('#view-assets').classList.toggle('hidden', currentTab !== 'assets');
+    $('#view-trend').classList.toggle('hidden', currentTab !== 'trend');
+    $('#tabbar').classList.remove('hidden');
+  } else if (view === 'trade') {
+    $('#view-trade').classList.remove('hidden');
+    $('#tabbar').classList.add('hidden');
+    Trades.render();
+  }
+  // Update title
+  var titles = { asset: '资产', trade: '买卖记账' };
+  $('#title').textContent = titles[view] || view;
+  // Update dropdown active state
+  document.querySelectorAll('.dd-item').forEach(function(d) {
+    d.classList.toggle('active', d.dataset.view === view);
+  });
   renderAll();
 }
 function renderAll() {
   syncTopbar();
   if (!$('#view-settings').classList.contains('hidden')) { renderSettings(); renderBadge(); return; }
+  if (currentView === 'trade') return; // trade view handles its own rendering
   if (currentTab === 'assets') renderAssets(); else renderTrend();
   renderBadge();
 }
@@ -120,9 +148,14 @@ function syncTopbar() {
     nav.innerHTML = svgIcon('gear');
     nav.title = '设置';
     nav.onclick = openSettings;
-    eye.classList.remove('hidden');
-    eye.innerHTML = svgIcon(state.settings.hideAmounts ? 'eyeOff' : 'eye');
-    eye.title = state.settings.hideAmounts ? '显示金额' : '隐藏金额';
+    // Eye only visible on asset view
+    if (currentView === 'asset') {
+      eye.classList.remove('hidden');
+      eye.innerHTML = svgIcon(state.settings.hideAmounts ? 'eyeOff' : 'eye');
+      eye.title = state.settings.hideAmounts ? '显示金额' : '隐藏金额';
+    } else {
+      eye.classList.add('hidden');
+    }
   }
 }
 
@@ -323,31 +356,22 @@ function renderTrend() {
 }
 // ---------- 设置 ----------
 function openSettings() {
+  settingsFromView = currentView;
   $('#view-assets').classList.add('hidden');
   $('#view-trend').classList.add('hidden');
+  $('#view-trade').classList.add('hidden');
   $('#view-settings').classList.remove('hidden');
   $('#tabbar').classList.add('hidden');
   $('#title').textContent = '设置';
   syncTopbar();
   renderSettings();
 }
-function closeSettings() { switchTab(currentTab); }
+function closeSettings() { switchView(settingsFromView); }
 
 function renderSettings() {
   const s = state.settings;
-  const archived = state.accounts.filter(a => a.archived);
-  $('#view-settings').innerHTML =
-    '<div class="card"><h3>分组管理<span class="muted small" style="margin-left:auto;font-weight:normal">拖拽排序</span></h3>' +
-    state.groups.slice().sort((a, b) => a.order - b.order).map(g =>
-      '<div class="row group-item" data-id="' + g.id + '">' +
-      '<span class="drag-handle" title="拖拽排序">' + svgIcon('grip') + '</span>' +
-      '<span class="grow">' + esc(g.name) + '</span>' +
-      '<button class="icon-btn g-ren" data-id="' + g.id + '">' + svgIcon('pencil') + '</button>' +
-      '<button class="icon-btn g-del" data-id="' + g.id + '">' + svgIcon('x') + '</button></div>').join('') +
-    '<button class="btn block" id="btn-add-group" style="margin-top:10px">添加分组</button></div>' +
-    (archived.length ? '<div class="card"><h3>已归档账户</h3>' + archived.map(a =>
-      '<div class="row"><span class="grow">' + a.icon + ' ' + esc(a.name) + '</span>' +
-      '<button class="btn small g-restore" data-id="' + a.id + '">恢复</button></div>').join('') + '</div>' : '') +
+  // Common section (shared across all modules)
+  let commonHtml =
     '<div class="card"><h3>Gist 自动备份<span id="gist-status" class="badge"></span></h3>' +
     '<div class="muted small">在 github.com/settings/tokens 创建 fine-grained token，仅勾选 Gists 读写权限</div>' +
     '<input id="in-token" type="password" placeholder="GitHub Token" value="' + esc(s.gistToken) + '">' +
@@ -364,31 +388,37 @@ function renderSettings() {
     '<div class="card"><h3>数据</h3><div class="btn-row">' +
     '<button class="btn" id="btn-export">导出 JSON</button>' +
     '<button class="btn" id="btn-import">导入 JSON</button></div>' +
-    '<input id="file-import" type="file" accept=".json,application/json" hidden></div>' +
-    '<div class="card muted small center">资产本 · 版本 ' + BUILD_ID + ' · ' + state.accounts.length + ' 个账户 · ' +
-    state.snapshots.length + ' 条快照</div>';
+    '<input id="file-import" type="file" accept=".json,application/json" hidden></div>';
 
-  $('#btn-add-group').onclick = () => {
-    const name = prompt('分组名称'); if (!name) return;
-    try { Core.addGroup(state, name); persist(); } catch (e) { alert(e.message); }
-  };
-  document.querySelectorAll('#view-settings .g-ren').forEach(b => {
-    b.onclick = () => {
-      const g = state.groups.find(x => x.id === b.dataset.id);
-      const name = prompt('新名称', g.name); if (!name) return;
-      try { Core.renameGroup(state, g.id, name); persist(); } catch (e) { alert(e.message); }
-    };
-  });
-  document.querySelectorAll('#view-settings .g-del').forEach(b => {
-    b.onclick = () => {
-      if (!confirm('删除该分组？')) return;
-      try { Core.deleteGroup(state, b.dataset.id); persist(); } catch (e) { alert(e.message); }
-    };
-  });
-  document.querySelectorAll('#view-settings .g-restore').forEach(b => {
-    b.onclick = () => { Core.setArchived(state, b.dataset.id, false); persist(); };
-  });
-  bindGroupDrag();
+  // Module-specific section
+  let moduleHtml = '';
+  if (settingsFromView === 'asset') {
+    const archived = state.accounts.filter(a => a.archived);
+    moduleHtml =
+      '<div class="card"><h3>分组管理<span class="muted small" style="margin-left:auto;font-weight:normal">拖拽排序</span></h3>' +
+      state.groups.slice().sort((a, b) => a.order - b.order).map(g =>
+        '<div class="row group-item" data-id="' + g.id + '">' +
+        '<span class="drag-handle" title="拖拽排序">' + svgIcon('grip') + '</span>' +
+        '<span class="grow">' + esc(g.name) + '</span>' +
+        '<button class="icon-btn g-ren" data-id="' + g.id + '">' + svgIcon('pencil') + '</button>' +
+        '<button class="icon-btn g-del" data-id="' + g.id + '">' + svgIcon('x') + '</button></div>').join('') +
+      '<button class="btn block" id="btn-add-group" style="margin-top:10px">添加分组</button></div>' +
+      (archived.length ? '<div class="card"><h3>已归档账户</h3>' + archived.map(a =>
+        '<div class="row"><span class="grow">' + a.icon + ' ' + esc(a.name) + '</span>' +
+        '<button class="btn small g-restore" data-id="' + a.id + '">恢复</button></div>').join('') + '</div>' : '');
+  } else if (settingsFromView === 'trade') {
+    moduleHtml =
+      '<div class="card"><h3>买卖记账设置</h3>' +
+      '<div class="muted small">交易记录：' + Trades.getRecordCount() + ' 条</div></div>';
+  }
+
+  // Version footer
+  let footerHtml = '<div class="card muted small center">资产本 · 版本 ' + BUILD_ID + ' · ' +
+    state.accounts.length + ' 个账户 · ' + state.snapshots.length + ' 条快照</div>';
+
+  $('#view-settings').innerHTML = moduleHtml + commonHtml + footerHtml;
+
+  // Bind common events
   $('#btn-save-backup').onclick = () => {
     state.settings.gistToken = $('#in-token').value.trim();
     state.settings.passphrase = $('#in-pass').value;
@@ -415,6 +445,31 @@ function renderSettings() {
     };
     reader.readAsText(file);
   };
+
+  // Bind module-specific events
+  if (settingsFromView === 'asset') {
+    $('#btn-add-group').onclick = () => {
+      const name = prompt('分组名称'); if (!name) return;
+      try { Core.addGroup(state, name); persist(); } catch (e) { alert(e.message); }
+    };
+    document.querySelectorAll('#view-settings .g-ren').forEach(b => {
+      b.onclick = () => {
+        const g = state.groups.find(x => x.id === b.dataset.id);
+        const name = prompt('新名称', g.name); if (!name) return;
+        try { Core.renameGroup(state, g.id, name); persist(); } catch (e) { alert(e.message); }
+      };
+    });
+    document.querySelectorAll('#view-settings .g-del').forEach(b => {
+      b.onclick = () => {
+        if (!confirm('删除该分组？')) return;
+        try { Core.deleteGroup(state, b.dataset.id); persist(); } catch (e) { alert(e.message); }
+      };
+    });
+    document.querySelectorAll('#view-settings .g-restore').forEach(b => {
+      b.onclick = () => { Core.setArchived(state, b.dataset.id, false); persist(); };
+    });
+    bindGroupDrag();
+  }
 }
 
 // ---------- 备份引擎 ----------
@@ -444,7 +499,11 @@ async function doBackup(isManual) {
   if (!s.gistToken) { if (isManual) alert('请先在下方填入 GitHub Token 并保存'); return; }
   try {
     setBadge('备份中…', 'warn');
-    let content = Core.exportData(state);
+    let content = JSON.stringify({
+      v: 2,
+      assets: Core.exportData(state),
+      trades: localStorage.getItem('assetbook.trades') || '{}'
+    });
     if (s.passphrase) content = await Core.encryptText(content, s.passphrase);
     const id = await Gist.pushBackup({ token: s.gistToken, gistId: s.gistId, content });
     s.gistId = id; s.lastBackupAt = Date.now(); s.lastBackupStatus = 'ok'; s.lastBackupError = '';
@@ -465,13 +524,28 @@ async function restoreFromGist() {
   if (!gistId) return;
   try {
     let content = await Gist.fetchBackup(token, gistId);
+    let raw;
+    try { raw = JSON.parse(content); } catch (_) { raw = null; }
+    // v2 format: { v:2, assets:..., trades:... }
     let data;
-    try { data = Core.importData(content); }
-    catch (e1) {
-      const pw = ($('#in-pass') && $('#in-pass').value) || prompt('数据已加密，输入加密口令');
-      if (!pw) return;
-      content = await Core.decryptText(content, pw);
-      data = Core.importData(content);
+    if (raw && raw.v === 2 && raw.assets) {
+      data = Core.importData(raw.assets);
+      if (raw.trades) localStorage.setItem('assetbook.trades', raw.trades);
+    } else {
+      // Try v1 (legacy) format
+      try { data = Core.importData(content); }
+      catch (e1) {
+        const pw = ($('#in-pass') && $('#in-pass').value) || prompt('数据已加密，输入加密口令');
+        if (!pw) return;
+        content = await Core.decryptText(content, pw);
+        try {
+          raw = JSON.parse(content);
+          if (raw && raw.v === 2 && raw.assets) {
+            data = Core.importData(raw.assets);
+            if (raw.trades) localStorage.setItem('assetbook.trades', raw.trades);
+          } else { data = Core.importData(content); }
+        } catch (_) { data = Core.importData(content); }
+      }
     }
     if (!confirm('将用备份覆盖当前数据（' + data.accounts.length + ' 个账户，' +
       data.snapshots.length + ' 条快照），确定？')) return;
@@ -497,6 +571,22 @@ async function exportJSON() {
 
 // ---------- 启动 ----------
 $('#btn-eye').onclick = () => { state.settings.hideAmounts = !state.settings.hideAmounts; saveState(); renderAll(); };
+$('#btn-settings').onclick = openSettings;
 $('#btn-add').onclick = () => openAccountModal(null);
 document.querySelectorAll('#tabbar .tab').forEach(b => { b.onclick = () => switchTab(b.dataset.tab); });
+
+// Title dropdown navigation
+(function() {
+  var btn = $('.title-btn');
+  var dd = $('.title-dropdown');
+  var overlay = $('#dd-overlay');
+  function toggleDD() { dd.classList.toggle('open'); overlay.classList.toggle('open'); }
+  function closeDD() { dd.classList.remove('open'); overlay.classList.remove('open'); }
+  btn.onclick = toggleDD;
+  overlay.onclick = closeDD;
+  dd.querySelectorAll('.dd-item').forEach(function(item) {
+    item.onclick = function() { closeDD(); switchView(item.dataset.view); };
+  });
+})();
+
 renderAll();

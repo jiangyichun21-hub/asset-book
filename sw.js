@@ -1,5 +1,5 @@
-const VERSION = 'assetbook-202608171830';
-const ASSETS = ['./', './index.html', './styles.css', './core.js', './gist.js', './ui.js',
+const VERSION = 'assetbook-202608171838';
+const ASSETS = ['./', './index.html', './styles.css', './core.js', './gist.js', './ui.js', './trades.js',
                 './manifest.json', './icons/icon-192.png', './icons/icon-512.png',
                 './icons/apple-touch-icon.png'];
 
