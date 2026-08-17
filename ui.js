@@ -250,10 +250,168 @@ function renderTrend() {
   });
   $('#trend-acct').onchange = e => { trendAccount = e.target.value; renderTrend(); };
 }
-function openSettings() { alert('Task 10 实现'); }               // Task 10 替换
-function renderSettings() {}                                      // Task 10 替换
-function scheduleBackup() {}                                      // Task 10 替换
-function renderBadge() {}                                         // Task 10 替换
+// ---------- 设置 ----------
+function openSettings() {
+  $('#view-assets').classList.add('hidden');
+  $('#view-trend').classList.add('hidden');
+  $('#view-settings').classList.remove('hidden');
+  $('#title').textContent = '设置';
+  renderSettings();
+}
+function closeSettings() { switchTab(currentTab); }
+
+function renderSettings() {
+  const s = state.settings;
+  const archived = state.accounts.filter(a => a.archived);
+  $('#view-settings').innerHTML =
+    '<button class="btn block" id="btn-back">← 返回</button>' +
+    '<div class="card"><h3>分组管理</h3>' +
+    state.groups.slice().sort((a, b) => a.order - b.order).map(g =>
+      '<div class="row"><span class="grow">' + esc(g.name) + '</span>' +
+      '<button class="icon-btn g-ren" data-id="' + g.id + '">✏️</button>' +
+      '<button class="icon-btn g-del" data-id="' + g.id + '">✕</button></div>').join('') +
+    '<button class="btn block" id="btn-add-group" style="margin-top:10px">添加分组</button></div>' +
+    (archived.length ? '<div class="card"><h3>已归档账户</h3>' + archived.map(a =>
+      '<div class="row"><span class="grow">' + a.icon + ' ' + esc(a.name) + '</span>' +
+      '<button class="btn small g-restore" data-id="' + a.id + '">恢复</button></div>').join('') + '</div>' : '') +
+    '<div class="card"><h3>Gist 自动备份</h3>' +
+    '<div class="muted small">在 github.com/settings/tokens 创建 fine-grained token，仅勾选 Gists 读写权限</div>' +
+    '<input id="in-token" type="password" placeholder="GitHub Token" value="' + esc(s.gistToken) + '">' +
+    '<input id="in-pass" type="password" placeholder="加密口令（可选，留空为明文备份）" value="' + esc(s.passphrase) + '">' +
+    '<div class="muted small">' + (s.lastBackupAt
+      ? '上次备份：' + new Date(s.lastBackupAt).toLocaleString('zh-CN') + (s.lastBackupStatus === 'ok' ? ' ✓' : ' ✗')
+      : '尚未备份') + '</div>' +
+    '<div class="btn-row"><button class="btn" id="btn-save-backup">保存配置</button>' +
+    '<button class="btn" id="btn-backup-now">立即备份</button>' +
+    '<button class="btn" id="btn-restore">从备份恢复</button></div></div>' +
+    '<div class="card"><h3>数据</h3><div class="btn-row">' +
+    '<button class="btn" id="btn-export">导出 JSON</button>' +
+    '<button class="btn" id="btn-import">导入 JSON</button></div>' +
+    '<input id="file-import" type="file" accept=".json,application/json" hidden></div>' +
+    '<div class="card muted small center">资产本 v1 · ' + state.accounts.length + ' 个账户 · ' +
+    state.snapshots.length + ' 条快照</div>';
+
+  $('#btn-back').onclick = closeSettings;
+  $('#btn-add-group').onclick = () => {
+    const name = prompt('分组名称'); if (!name) return;
+    try { Core.addGroup(state, name); persist(); } catch (e) { alert(e.message); }
+  };
+  document.querySelectorAll('#view-settings .g-ren').forEach(b => {
+    b.onclick = () => {
+      const g = state.groups.find(x => x.id === b.dataset.id);
+      const name = prompt('新名称', g.name); if (!name) return;
+      try { Core.renameGroup(state, g.id, name); persist(); } catch (e) { alert(e.message); }
+    };
+  });
+  document.querySelectorAll('#view-settings .g-del').forEach(b => {
+    b.onclick = () => {
+      if (!confirm('删除该分组？')) return;
+      try { Core.deleteGroup(state, b.dataset.id); persist(); } catch (e) { alert(e.message); }
+    };
+  });
+  document.querySelectorAll('#view-settings .g-restore').forEach(b => {
+    b.onclick = () => { Core.setArchived(state, b.dataset.id, false); persist(); };
+  });
+  $('#btn-save-backup').onclick = () => {
+    state.settings.gistToken = $('#in-token').value.trim();
+    state.settings.passphrase = $('#in-pass').value;
+    saveState(); renderBadge(); alert('已保存');
+  };
+  $('#btn-backup-now').onclick = () => {
+    state.settings.gistToken = $('#in-token').value.trim();
+    state.settings.passphrase = $('#in-pass').value;
+    saveState(); doBackup();
+  };
+  $('#btn-restore').onclick = restoreFromGist;
+  $('#btn-export').onclick = exportJSON;
+  $('#btn-import').onclick = () => $('#file-import').click();
+  $('#file-import').onchange = e => {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = Core.importData(reader.result);
+        if (!confirm('将用备份覆盖当前数据（' + data.accounts.length + ' 个账户，' +
+          data.snapshots.length + ' 条快照），确定？')) return;
+        state = data; saveState(); alert('导入成功'); closeSettings();
+      } catch (err) { alert('导入失败：' + err.message); }
+    };
+    reader.readAsText(file);
+  };
+}
+
+// ---------- 备份引擎 ----------
+let backupTimer = 0;
+function setBadge(txt, cls) {
+  const b = $('#backup-badge');
+  b.textContent = txt; b.className = 'badge' + (cls ? ' ' + cls : '');
+}
+function renderBadge() {
+  const s = state.settings;
+  if (!s.gistToken) { setBadge(''); return; }
+  if (backupTimer) setBadge('待备份', 'warn');
+  else if (s.lastBackupStatus === 'fail') setBadge('备份失败', 'bad');
+  else if (s.lastBackupAt) setBadge('已备份', 'ok');
+  else setBadge('未备份', 'warn');
+}
+function scheduleBackup() {
+  if (!state.settings.gistToken) return;
+  clearTimeout(backupTimer);
+  backupTimer = setTimeout(doBackup, 3000);
+  renderBadge();
+}
+async function doBackup() {
+  backupTimer = 0;
+  const s = state.settings;
+  if (!s.gistToken) return;
+  try {
+    setBadge('备份中…', 'warn');
+    let content = Core.exportData(state);
+    if (s.passphrase) content = await Core.encryptText(content, s.passphrase);
+    const id = await Gist.pushBackup({ token: s.gistToken, gistId: s.gistId, content });
+    s.gistId = id; s.lastBackupAt = Date.now(); s.lastBackupStatus = 'ok';
+    saveState(); renderBadge();
+  } catch (e) {
+    s.lastBackupStatus = 'fail'; saveState(); renderBadge();
+  }
+}
+async function restoreFromGist() {
+  const token = ($('#in-token') ? $('#in-token').value.trim() : '') || state.settings.gistToken;
+  if (!token) { alert('请先填写 Token'); return; }
+  const gistId = state.settings.gistId ||
+    prompt('输入备份 Gist ID（gist.github.com 上备份地址最后一段）');
+  if (!gistId) return;
+  try {
+    let content = await Gist.fetchBackup(token, gistId);
+    let data;
+    try { data = Core.importData(content); }
+    catch (e1) {
+      const pw = ($('#in-pass') && $('#in-pass').value) || prompt('数据已加密，输入加密口令');
+      if (!pw) return;
+      content = await Core.decryptText(content, pw);
+      data = Core.importData(content);
+    }
+    if (!confirm('将用备份覆盖当前数据（' + data.accounts.length + ' 个账户，' +
+      data.snapshots.length + ' 条快照），确定？')) return;
+    state = data;
+    state.settings.gistToken = token; state.settings.gistId = gistId;
+    saveState(); alert('恢复成功'); closeSettings();
+  } catch (e) { alert('恢复失败：' + e.message); }
+}
+async function exportJSON() {
+  const content = Core.exportData(state);
+  const name = 'asset-book-backup-' + new Date().toISOString().slice(0, 10) + '.json';
+  const file = new File([content], name, { type: 'application/json' });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file] }); } catch (e) { return; }
+  } else {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([content], { type: 'application/json' }));
+    a.download = name; a.click();
+  }
+  state.settings.lastExportAt = Date.now();
+  saveState(); renderSettings();
+}
 
 // ---------- 启动 ----------
 $('#btn-eye').onclick = () => { state.settings.hideAmounts = !state.settings.hideAmounts; saveState(); renderAll(); };
