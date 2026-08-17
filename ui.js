@@ -1,7 +1,7 @@
 /* global Core, Gist, Trades */
 'use strict';
 const LS_KEY = 'assetbook.v1';
-const BUILD_ID = '202608172130';
+const BUILD_ID = '202608172200';
 const $ = sel => document.querySelector(sel);
 
 let state = loadState();
@@ -450,7 +450,8 @@ function renderSettings() {
     '<div class="btn-row"><button class="btn primary" id="btn-check-update">检查更新</button></div></div>' +
     '<div class="card"><h3>Gist 自动备份<span id="gist-status" class="badge"></span></h3>' +
     '<div class="muted small">在 github.com/settings/tokens 创建 fine-grained token，仅勾选 Gists 读写权限</div>' +
-    '<input id="in-token" type="password" placeholder="GitHub Token" value="' + esc(s.gistToken) + '">' +
+    '<div class="token-input-wrap"><input id="in-token" type="password" placeholder="GitHub Token" value="' + esc(s.gistToken) + '">' +
+    '<button type="button" class="token-eye" id="btn-token-eye" title="显示/隐藏">' + svgIcon('eye') + '</button></div>' +
     '<input id="in-pass" type="password" placeholder="加密口令（可选，留空为明文备份）" value="' + esc(s.passphrase) + '">' +
     '<div class="muted small">' + (s.lastBackupAt
       ? '上次备份：' + new Date(s.lastBackupAt).toLocaleString('zh-CN') + (s.lastBackupStatus === 'ok' ? ' ✓' : ' ✗')
@@ -496,6 +497,13 @@ function renderSettings() {
 
   // Bind common events
   $('#btn-check-update').onclick = forceUpdate;
+  $('#btn-token-eye').onclick = () => {
+    const inp = $('#in-token');
+    const btn = $('#btn-token-eye');
+    const isPw = inp.type === 'password';
+    inp.type = isPw ? 'text' : 'password';
+    btn.innerHTML = svgIcon(isPw ? 'eyeOff' : 'eye');
+  };
   $('#btn-save-backup').onclick = () => {
     state.settings.gistToken = $('#in-token').value.trim();
     state.settings.passphrase = $('#in-pass').value;

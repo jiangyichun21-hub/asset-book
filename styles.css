@@ -23,6 +23,14 @@ body { max-width: 520px; margin: 0 auto; padding-bottom: calc(72px + env(safe-ar
 /* Body scroll lock when overlay/sheet/dropdown is open (iOS-safe: JS toggles inline styles) */
 body.scroll-locked { overflow: hidden; touch-action: none; }
 .overlay { overscroll-behavior: contain; }
+
+/* Token input with inline eye toggle */
+.token-input-wrap { position: relative; margin: 8px 0; }
+.token-input-wrap input { margin: 0; padding-right: 42px; width: 100%; }
+.token-eye { position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+  border: 0; background: none; padding: 8px; cursor: pointer; color: var(--muted);
+  display: flex; align-items: center; }
+.token-eye .ico { width: 18px; height: 18px; display: block; color: var(--muted); }
 .card h3 { display: flex; align-items: center; gap: 8px; }
 .card h3 .badge { margin-left: auto; }
 .icon-btn { border: 0; background: none; font-size: 20px; padding: 6px; cursor: pointer; color: var(--text); }
