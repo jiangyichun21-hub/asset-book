@@ -166,6 +166,52 @@
     }).join(' ');
   }
 
+  // ---------- 导出/导入 ----------
+  function exportData(state) {
+    return JSON.stringify({ app: 'asset-book', version: SCHEMA, exportedAt: Date.now(), data: state }, null, 2);
+  }
+  function importData(json) {
+    const obj = typeof json === 'string' ? JSON.parse(json) : json;
+    if (!obj || obj.app !== 'asset-book' || !obj.data) throw new Error('不是有效的资产本备份数据');
+    const d = obj.data;
+    if (!Array.isArray(d.groups) || !Array.isArray(d.accounts) || !Array.isArray(d.snapshots) || !d.settings)
+      throw new Error('备份数据结构损坏');
+    return d;
+  }
+
+  // ---------- 加密（WebCrypto：PBKDF2 + AES-GCM）----------
+  const te = typeof TextEncoder !== 'undefined' ? new TextEncoder() : null;
+  const td = typeof TextDecoder !== 'undefined' ? new TextDecoder() : null;
+  function bufToB64(buf) {
+    const b = new Uint8Array(buf); let s = '';
+    for (let i = 0; i < b.length; i++) s += String.fromCharCode(b[i]);
+    return btoa(s);
+  }
+  function b64ToBuf(str) {
+    const bin = atob(str); const b = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) b[i] = bin.charCodeAt(i);
+    return b;
+  }
+  async function deriveKey(passphrase, salt) {
+    const km = await crypto.subtle.importKey('raw', te.encode(passphrase), 'PBKDF2', false, ['deriveKey']);
+    return crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: 150000, hash: 'SHA-256' },
+      km, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+  }
+  async function encryptText(plain, passphrase) {
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const key = await deriveKey(passphrase, salt);
+    const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, te.encode(plain));
+    return JSON.stringify({ enc: 'v1', salt: bufToB64(salt), iv: bufToB64(iv), ct: bufToB64(ct) });
+  }
+  async function decryptText(payload, passphrase) {
+    const o = typeof payload === 'string' ? JSON.parse(payload) : payload;
+    if (o.enc !== 'v1') throw new Error('未知加密格式');
+    const key = await deriveKey(passphrase, b64ToBuf(o.salt));
+    const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64ToBuf(o.iv) }, key, b64ToBuf(o.ct));
+    return td.decode(pt);
+  }
+
   return {
     SCHEMA, DEFAULT_GROUPS, uid, round2, pad,
     createInitialState,
@@ -173,6 +219,7 @@
     addAccount, updateAccount, setArchived, activeAccounts,
     addSnapshot, deleteSnapshot, snapshotsOf, latestSnapshot,
     currentBalance, lastUpdatedAt, totalAssets, groupSubtotal,
-    dailySeries, rangeStats, svgPath, startOfDay, dayKey
+    dailySeries, rangeStats, svgPath, startOfDay, dayKey,
+    exportData, importData, encryptText, decryptText
   };
 });

@@ -97,3 +97,21 @@ test('svgPath 生成折线路径', () => {
   assert.strictEqual(Core.svgPath([], 100, 50), '');
   assert.ok(Core.svgPath([{ total: 5 }], 100, 50, 0).startsWith('M50'));  // 单点居中
 });
+
+test('导出导入 roundtrip', () => {
+  const s = Core.createInitialState();
+  const a = Core.addAccount(s, { name: 'A', groupId: s.groups[0].id });
+  Core.addSnapshot(s, a.id, 100, 1000);
+  const restored = Core.importData(Core.exportData(s));
+  assert.deepStrictEqual(restored, s);
+  assert.throws(() => Core.importData('{"foo":1}'), /有效/);
+  assert.throws(() => Core.importData('{"app":"asset-book","data":{}}'), /损坏/);
+});
+
+test('加密解密 roundtrip，错误口令报错', async () => {
+  const ct = await Core.encryptText('机密数据', '口令123');
+  assert.notStrictEqual(ct, '机密数据');
+  assert.strictEqual(JSON.parse(ct).enc, 'v1');
+  assert.strictEqual(await Core.decryptText(ct, '口令123'), '机密数据');
+  await assert.rejects(Core.decryptText(ct, '错误口令'));
+});
