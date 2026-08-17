@@ -1,7 +1,7 @@
 /* global Core, Gist */
 'use strict';
 const LS_KEY = 'assetbook.v1';
-const BUILD_ID = '202608171717';
+const BUILD_ID = '202608171809';
 const $ = sel => document.querySelector(sel);
 
 let state = loadState();
@@ -326,6 +326,7 @@ function openSettings() {
   $('#view-trend').classList.add('hidden');
   $('#view-settings').classList.remove('hidden');
   $('#title').textContent = '设置';
+  syncTopbar();
   renderSettings();
 }
 function closeSettings() { switchTab(currentTab); }
