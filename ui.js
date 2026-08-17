@@ -1,7 +1,7 @@
 /* global Core, Gist */
 'use strict';
 const LS_KEY = 'assetbook.v1';
-const BUILD_ID = '202608171543';
+const BUILD_ID = '202608171551';
 const $ = sel => document.querySelector(sel);
 
 let state = loadState();
@@ -115,7 +115,6 @@ function renderAssets() {
     '<div class="total-num">' + fmtMoney(total) + '</div>' +
     '<div class="muted small">' + Core.activeAccounts(state).length + ' 个账户</div></div>';
   html += backupHintHtml();
-  if (state.accounts.length) html += '<button class="btn primary block" id="btn-inventory">开始盘点</button>';
   for (const g of state.groups.slice().sort((a, b) => a.order - b.order)) {
     const accts = Core.activeAccounts(state).filter(a => a.groupId === g.id);
     if (!accts.length) continue;
@@ -131,6 +130,7 @@ function renderAssets() {
     html += '</details>';
   }
   if (!state.accounts.length) html += '<div class="card muted center">点右下角 ＋ 添加第一个账户</div>';
+  if (state.accounts.length) html += '<button class="btn primary block" id="btn-inventory">开始盘点</button>';
   $('#view-assets').innerHTML = html;
   const inv = $('#btn-inventory'); if (inv) inv.onclick = startInventory;
   document.querySelectorAll('#view-assets .acct').forEach(el => { el.onclick = () => openBalanceModal(el.dataset.id); });
