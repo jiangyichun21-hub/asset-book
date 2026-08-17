@@ -1,7 +1,7 @@
 /* global Core, Gist, Trades */
 'use strict';
 const LS_KEY = 'assetbook.v1';
-const BUILD_ID = '202608180010';
+const BUILD_ID = '202608172330';
 const $ = sel => document.querySelector(sel);
 
 let state = loadState();
@@ -492,7 +492,7 @@ function renderSettings() {
   }
 
   // Version footer
-  let footerHtml = '<div class="card muted small center">资产本 · 版本 ' + BUILD_ID + ' · ' +
+  let footerHtml = '<div class="card muted small center">eNook · 版本 ' + BUILD_ID + ' · ' +
     state.accounts.length + ' 个账户 · ' + state.snapshots.length + ' 条快照</div>';
 
   $('#view-settings').innerHTML = moduleHtml + commonHtml + footerHtml;

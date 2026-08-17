@@ -1,7 +1,7 @@
-const VERSION = 'assetbook-202608180010';
+const VERSION = 'assetbook-202608172330';
 const ASSETS = ['./', './index.html', './styles.css', './core.js', './gist.js', './ui.js', './trades.js',
                 './manifest.json', './icons/icon-192.png', './icons/icon-512.png',
-                './icons/apple-touch-icon.png'];
+                './icons/apple-touch-icon.png', './icons/favicon.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
