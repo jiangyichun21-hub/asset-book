@@ -1,7 +1,7 @@
 /* global Core, Gist, Trades */
 'use strict';
 const LS_KEY = 'assetbook.v1';
-const BUILD_ID = '202608171950';
+const BUILD_ID = '202608172005';
 const $ = sel => document.querySelector(sel);
 
 let state = loadState();
@@ -403,6 +403,9 @@ function renderSettings() {
   const s = state.settings;
   // Common section (shared across all modules)
   let commonHtml =
+    '<div class="card"><h3>应用</h3>' +
+    '<div class="muted small">当前版本 ' + BUILD_ID + '，如遇更新未生效可强制刷新</div>' +
+    '<div class="btn-row"><button class="btn primary" id="btn-check-update">检查更新</button></div></div>' +
     '<div class="card"><h3>Gist 自动备份<span id="gist-status" class="badge"></span></h3>' +
     '<div class="muted small">在 github.com/settings/tokens 创建 fine-grained token，仅勾选 Gists 读写权限</div>' +
     '<input id="in-token" type="password" placeholder="GitHub Token" value="' + esc(s.gistToken) + '">' +
@@ -450,6 +453,7 @@ function renderSettings() {
   $('#view-settings').innerHTML = moduleHtml + commonHtml + footerHtml;
 
   // Bind common events
+  $('#btn-check-update').onclick = forceUpdate;
   $('#btn-save-backup').onclick = () => {
     state.settings.gistToken = $('#in-token').value.trim();
     state.settings.passphrase = $('#in-pass').value;
@@ -505,6 +509,33 @@ function renderSettings() {
 
 // ---------- 备份引擎 ----------
 let backupTimer = 0;
+async function forceUpdate() {
+  const btn = $('#btn-check-update');
+  if (btn) { btn.disabled = true; btn.textContent = '检查中…'; }
+  try {
+    if ('serviceWorker' in navigator) {
+      const reg = await navigator.serviceWorker.getRegistration();
+      if (reg) {
+        // Trigger update check
+        await reg.update();
+        // If there's a waiting worker, tell it to skip waiting
+        if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+        // Wait a beat for the new SW to install/activate
+        await new Promise(r => setTimeout(r, 500));
+      }
+    }
+    // Purge all caches so the reload fetches fresh assets
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    }
+    // Hard reload
+    location.reload();
+  } catch (e) {
+    if (btn) { btn.disabled = false; btn.textContent = '检查更新'; }
+    alert('更新失败：' + (e && e.message ? e.message : String(e)));
+  }
+}
 function setBadge(txt, cls) {
   const b = $('#gist-status');
   if (!b) return;
