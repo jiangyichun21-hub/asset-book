@@ -1,0 +1,121 @@
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else root.Core = factory();
+})(typeof self !== 'undefined' ? self : this, function () {
+  'use strict';
+  const SCHEMA = 1;
+  const DAY = 86400000;
+  const DEFAULT_GROUPS = ['现金', '银行卡', '支付平台', '公积金', '投资'];
+
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+  function round2(n) { return Math.round(n * 100) / 100; }
+  function pad(n) { return n < 10 ? '0' + n : '' + n; }
+
+  function createInitialState(now) {
+    now = now || Date.now();
+    return {
+      schema: SCHEMA,
+      groups: DEFAULT_GROUPS.map((name, i) => ({ id: uid() + i, name, order: i })),
+      accounts: [],
+      snapshots: [],
+      settings: { hideAmounts: false, gistToken: '', gistId: '', passphrase: '',
+                  lastBackupAt: 0, lastBackupStatus: '', lastExportAt: 0 },
+      createdAt: now
+    };
+  }
+
+  // ---------- 分组 ----------
+  function addGroup(state, name) {
+    name = String(name || '').trim();
+    if (!name) throw new Error('分组名不能为空');
+    if (state.groups.some(g => g.name === name)) throw new Error('分组已存在');
+    const g = { id: uid(), name, order: state.groups.length };
+    state.groups.push(g);
+    return g;
+  }
+  function renameGroup(state, id, name) {
+    name = String(name || '').trim();
+    if (!name) throw new Error('分组名不能为空');
+    const g = state.groups.find(x => x.id === id);
+    if (!g) throw new Error('分组不存在');
+    g.name = name;
+    return g;
+  }
+  function deleteGroup(state, id) {
+    if (state.accounts.some(a => a.groupId === id)) throw new Error('分组下还有账户，不能删除');
+    state.groups = state.groups.filter(g => g.id !== id);
+  }
+
+  // ---------- 账户 ----------
+  function addAccount(state, opts) {
+    const name = String((opts && opts.name) || '').trim();
+    if (!name) throw new Error('账户名不能为空');
+    if (!state.groups.some(g => g.id === opts.groupId)) throw new Error('分组不存在');
+    const a = { id: uid(), name, groupId: opts.groupId, icon: opts.icon || '💰',
+                color: opts.color || '#4f6ef7', order: state.accounts.length,
+                archived: false, createdAt: Date.now() };
+    state.accounts.push(a);
+    return a;
+  }
+  function updateAccount(state, id, patch) {
+    const a = state.accounts.find(x => x.id === id);
+    if (!a) throw new Error('账户不存在');
+    if (patch.name !== undefined) {
+      const name = String(patch.name).trim();
+      if (!name) throw new Error('账户名不能为空');
+      a.name = name;
+    }
+    if (patch.groupId !== undefined) {
+      if (!state.groups.some(g => g.id === patch.groupId)) throw new Error('分组不存在');
+      a.groupId = patch.groupId;
+    }
+    if (patch.icon !== undefined) a.icon = patch.icon;
+    if (patch.color !== undefined) a.color = patch.color;
+    return a;
+  }
+  function setArchived(state, id, archived) {
+    const a = state.accounts.find(x => x.id === id);
+    if (!a) throw new Error('账户不存在');
+    a.archived = !!archived;
+    return a;
+  }
+  function activeAccounts(state) {
+    return state.accounts.filter(a => !a.archived).sort((x, y) => x.order - y.order);
+  }
+
+  // ---------- 快照 ----------
+  function addSnapshot(state, accountId, balance, at) {
+    balance = Number(balance);
+    if (!isFinite(balance) || balance < 0) throw new Error('余额必须是不小于 0 的数字');
+    if (!state.accounts.some(a => a.id === accountId)) throw new Error('账户不存在');
+    const s = { id: uid(), accountId, balance: round2(balance), at: at || Date.now() };
+    state.snapshots.push(s);
+    return s;
+  }
+  function deleteSnapshot(state, id) { state.snapshots = state.snapshots.filter(s => s.id !== id); }
+  function snapshotsOf(state, accountId) {
+    return state.snapshots.filter(s => s.accountId === accountId).sort((x, y) => x.at - y.at);
+  }
+  function latestSnapshot(state, accountId) {
+    const list = snapshotsOf(state, accountId);
+    return list.length ? list[list.length - 1] : null;
+  }
+  function currentBalance(state, accountId) { const s = latestSnapshot(state, accountId); return s ? s.balance : 0; }
+  function lastUpdatedAt(state, accountId) { const s = latestSnapshot(state, accountId); return s ? s.at : 0; }
+  function totalAssets(state) {
+    return round2(activeAccounts(state).reduce((sum, a) => sum + currentBalance(state, a.id), 0));
+  }
+  function groupSubtotal(state, groupId) {
+    return round2(activeAccounts(state).filter(a => a.groupId === groupId)
+      .reduce((sum, a) => sum + currentBalance(state, a.id), 0));
+  }
+
+  return {
+    SCHEMA, DEFAULT_GROUPS, uid, round2, pad,
+    createInitialState,
+    addGroup, renameGroup, deleteGroup,
+    addAccount, updateAccount, setArchived, activeAccounts,
+    addSnapshot, deleteSnapshot, snapshotsOf, latestSnapshot,
+    currentBalance, lastUpdatedAt, totalAssets, groupSubtotal
+  };
+});
