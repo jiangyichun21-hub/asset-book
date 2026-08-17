@@ -1,7 +1,7 @@
 /* global Core, Gist */
 'use strict';
 const LS_KEY = 'assetbook.v1';
-const BUILD_ID = '202608171809';
+const BUILD_ID = '202608171830';
 const $ = sel => document.querySelector(sel);
 
 let state = loadState();
@@ -97,6 +97,7 @@ function switchTab(tab) {
   $('#view-settings').classList.add('hidden');
   $('#view-assets').classList.toggle('hidden', tab !== 'assets');
   $('#view-trend').classList.toggle('hidden', tab !== 'trend');
+  $('#tabbar').classList.remove('hidden');
   $('#title').textContent = tab === 'assets' ? '资产' : '趋势';
   renderAll();
 }
@@ -325,6 +326,7 @@ function openSettings() {
   $('#view-assets').classList.add('hidden');
   $('#view-trend').classList.add('hidden');
   $('#view-settings').classList.remove('hidden');
+  $('#tabbar').classList.add('hidden');
   $('#title').textContent = '设置';
   syncTopbar();
   renderSettings();
