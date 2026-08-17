@@ -19,7 +19,9 @@ body { max-width: 520px; margin: 0 auto; padding-bottom: calc(72px + env(safe-ar
   padding: calc(8px + env(safe-area-inset-top)) 12px 8px; background: var(--bg); }
 #topbar h1 { flex: 1; text-align: center; font-size: 17px; }
 .topbar-right { display: flex; align-items: center; gap: 6px; }
-.icon-btn { border: 0; background: none; font-size: 20px; padding: 6px; cursor: pointer; }
+.icon-btn { border: 0; background: none; font-size: 20px; padding: 6px; cursor: pointer; color: var(--text); }
+.icon-btn .ico { width: 21px; height: 21px; display: block; }
+.row .icon-btn .ico { width: 16px; height: 16px; color: var(--muted); }
 .badge { font-size: 11px; padding: 2px 8px; border-radius: 10px; }
 .badge.ok { background: #e6f7ef; color: var(--down); }
 .badge.warn { background: #fff4e5; color: #f79009; }

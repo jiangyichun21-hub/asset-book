@@ -27,6 +27,17 @@ function fmtAgo(ts) {
   return d <= 0 ? '今天' : d === 1 ? '昨天' : d + ' 天前';
 }
 function isStale(ts) { return !ts || Date.now() - ts > 30 * 86400000; }
+const SVG_PATHS = {
+  gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
+  eye: '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
+  eyeOff: '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>',
+  pencil: '<path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>',
+  x: '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>'
+};
+function svgIcon(name) {
+  return '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"' +
+    ' stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + SVG_PATHS[name] + '</svg>';
+}
 
 // ---------- 弹层 ----------
 function openModal(html) {
@@ -50,6 +61,9 @@ function switchTab(tab) {
   renderAll();
 }
 function renderAll() {
+  const eye = $('#btn-eye');
+  eye.innerHTML = svgIcon(state.settings.hideAmounts ? 'eyeOff' : 'eye');
+  eye.title = state.settings.hideAmounts ? '显示金额' : '隐藏金额';
   if (!$('#view-settings').classList.contains('hidden')) { renderSettings(); renderBadge(); return; }
   if (currentTab === 'assets') renderAssets(); else renderTrend();
   renderBadge();
@@ -120,7 +134,7 @@ function openHistoryModal(accountId) {
     (list.length ? list.map(s =>
       '<div class="row"><span class="grow small">' + new Date(s.at).toLocaleString('zh-CN') + '</span>' +
       '<span class="num">' + fmtMoney(s.balance) + '</span>' +
-      '<button class="icon-btn del" data-id="' + s.id + '">✕</button></div>').join('')
+      '<button class="icon-btn del" data-id="' + s.id + '">' + svgIcon('x') + '</button></div>').join('')
       : '<div class="muted center">暂无记录</div>') +
     '<div class="btn-row"><button class="btn" id="btn-close-history">关闭</button></div>');
   $('#btn-close-history').onclick = closeModal;
@@ -268,8 +282,8 @@ function renderSettings() {
     '<div class="card"><h3>分组管理</h3>' +
     state.groups.slice().sort((a, b) => a.order - b.order).map(g =>
       '<div class="row"><span class="grow">' + esc(g.name) + '</span>' +
-      '<button class="icon-btn g-ren" data-id="' + g.id + '">✏️</button>' +
-      '<button class="icon-btn g-del" data-id="' + g.id + '">✕</button></div>').join('') +
+      '<button class="icon-btn g-ren" data-id="' + g.id + '">' + svgIcon('pencil') + '</button>' +
+      '<button class="icon-btn g-del" data-id="' + g.id + '">' + svgIcon('x') + '</button></div>').join('') +
     '<button class="btn block" id="btn-add-group" style="margin-top:10px">添加分组</button></div>' +
     (archived.length ? '<div class="card"><h3>已归档账户</h3>' + archived.map(a =>
       '<div class="row"><span class="grow">' + a.icon + ' ' + esc(a.name) + '</span>' +
