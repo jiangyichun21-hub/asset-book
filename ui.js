@@ -32,12 +32,50 @@ const SVG_PATHS = {
   eye: '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
   eyeOff: '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>',
   pencil: '<path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>',
-  x: '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>'
+  x: '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
+  grip: '<line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/>'
 };
 function svgIcon(name) {
   return '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"' +
     ' stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + SVG_PATHS[name] + '</svg>';
 }
+
+// ---------- 分组拖拽排序 ----------
+let dragId = null;
+function bindGroupDrag() {
+  document.querySelectorAll('#view-settings .group-item .drag-handle').forEach(h => {
+    h.addEventListener('pointerdown', e => {
+      e.preventDefault();
+      dragId = h.closest('.group-item').dataset.id;
+      h.closest('.group-item').classList.add('dragging');
+    });
+  });
+}
+document.addEventListener('pointermove', e => {
+  if (!dragId) return;
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  const target = el && el.closest && el.closest('.group-item');
+  if (!target || target.dataset.id === dragId) return;
+  const arr = state.groups.slice().sort((a, b) => a.order - b.order);
+  const from = arr.findIndex(g => g.id === dragId);
+  const to = arr.findIndex(g => g.id === target.dataset.id);
+  if (from < 0 || to < 0 || from === to) return;
+  const [m] = arr.splice(from, 1);
+  arr.splice(to, 0, m);
+  arr.forEach((g, i) => { g.order = i; });
+  renderSettings();
+  const el2 = document.querySelector('#view-settings .group-item[data-id="' + dragId + '"]');
+  if (el2) el2.classList.add('dragging');
+});
+function endDrag() {
+  if (!dragId) return;
+  dragId = null;
+  saveState(); scheduleBackup();
+  const el = document.querySelector('#view-settings .group-item.dragging');
+  if (el) el.classList.remove('dragging');
+}
+document.addEventListener('pointerup', endDrag);
+document.addEventListener('pointercancel', endDrag);
 
 // ---------- 弹层 ----------
 function openModal(html) {
@@ -279,9 +317,11 @@ function renderSettings() {
   const archived = state.accounts.filter(a => a.archived);
   $('#view-settings').innerHTML =
     '<button class="btn block" id="btn-back">← 返回</button>' +
-    '<div class="card"><h3>分组管理</h3>' +
+    '<div class="card"><h3>分组管理<span class="muted small" style="margin-left:auto;font-weight:normal">拖拽排序</span></h3>' +
     state.groups.slice().sort((a, b) => a.order - b.order).map(g =>
-      '<div class="row"><span class="grow">' + esc(g.name) + '</span>' +
+      '<div class="row group-item" data-id="' + g.id + '">' +
+      '<span class="drag-handle" title="拖拽排序">' + svgIcon('grip') + '</span>' +
+      '<span class="grow">' + esc(g.name) + '</span>' +
       '<button class="icon-btn g-ren" data-id="' + g.id + '">' + svgIcon('pencil') + '</button>' +
       '<button class="icon-btn g-del" data-id="' + g.id + '">' + svgIcon('x') + '</button></div>').join('') +
     '<button class="btn block" id="btn-add-group" style="margin-top:10px">添加分组</button></div>' +
@@ -326,6 +366,7 @@ function renderSettings() {
   document.querySelectorAll('#view-settings .g-restore').forEach(b => {
     b.onclick = () => { Core.setArchived(state, b.dataset.id, false); persist(); };
   });
+  bindGroupDrag();
   $('#btn-save-backup').onclick = () => {
     state.settings.gistToken = $('#in-token').value.trim();
     state.settings.passphrase = $('#in-pass').value;

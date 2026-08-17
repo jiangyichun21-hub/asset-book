@@ -24,6 +24,10 @@ body { max-width: 520px; margin: 0 auto; padding-bottom: calc(72px + env(safe-ar
 .icon-btn { border: 0; background: none; font-size: 20px; padding: 6px; cursor: pointer; color: var(--text); }
 .icon-btn .ico { width: 21px; height: 21px; display: block; }
 .row .icon-btn .ico { width: 16px; height: 16px; color: var(--muted); }
+.drag-handle { display: flex; align-items: center; padding: 6px 4px; color: var(--muted); cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
+.drag-handle:active { cursor: grabbing; }
+.drag-handle .ico { width: 18px; height: 18px; display: block; }
+.group-item.dragging { opacity: 0.4; background: #f0f2f6; }
 .badge { font-size: 11px; padding: 2px 8px; border-radius: 10px; }
 .badge.ok { background: #e6f7ef; color: var(--down); }
 .badge.warn { background: #fff4e5; color: #f79009; }
