@@ -20,7 +20,7 @@
       snapshots: [],
       settings: { hideAmounts: false, gistToken: '', gistId: '', passphrase: '',
                   lastBackupAt: 0, lastBackupStatus: '', lastExportAt: 0,
-                  lockHash: '', lockSalt: '', webauthnCredId: '' },
+                  lockHash: '', lockSalt: '', webauthnCredId: '', aiKey: '' },
       createdAt: now
     };
   }

@@ -282,26 +282,14 @@ var Health = (function() {
   }
 
   // ===== OCR (qwen-vl) =====
-  var OCR_KEY = 'assetbook.ocr.key';
   var OCR_KEY_DEFAULT = 'sk-ws-H.EPRRRHI.HlbR.MEYCIQDrYAyIGWpKBXwWUf0Hi3BLICroawr8-HYbqM4ErV0odAIhAMsVp6Hr07NR1hswIIgUqPhViBiJFgAy2o0RmjayrYpg';
   var OCR_PROMPT = '请从这张体脂秤/体成分报告中提取以下数据，以JSON格式返回（只返回JSON，不要其他文字）。' +
     '字段：weight(体重kg), bodyFat(体脂率%), muscle(肌肉量kg), bmi(BMI), bmr(基础代谢kcal), visceralFat(内脏脂肪指数), ' +
     'water(体水分kg), protein(蛋白质kg), boneMass(骨量kg), fatMass(脂肪量kg), skeletalMuscle(骨骼肌kg), date(报告日期YYYY-MM-DD)。' +
     '如果某个字段在图中找不到，设为null。数字用number类型，不要用字符串。';
 
-  function promptOcrKey() {
-    var cur = localStorage.getItem(OCR_KEY) || '';
-    var val = prompt('请输入百炼平台 API Key\n(bailian.console.aliyun.com 获取)', cur);
-    if (val !== null) {
-      val = val.trim();
-      if (val) localStorage.setItem(OCR_KEY, val);
-      else localStorage.removeItem(OCR_KEY);
-      render();
-    }
-  }
-
   function startOcr() {
-    var key = localStorage.getItem(OCR_KEY) || OCR_KEY_DEFAULT;
+    var key = (window._getAiKey && window._getAiKey()) || OCR_KEY_DEFAULT;
     // Create hidden file input
     var input = document.createElement('input');
     input.type = 'file';
@@ -384,8 +372,6 @@ var Health = (function() {
     if (addBody) addBody.onclick = function() { openBodyForm(null); };
     var ocrBtn = document.getElementById('btn-ocr-body');
     if (ocrBtn) ocrBtn.onclick = function() { startOcr(); };
-    var setKeyBtn = document.getElementById('btn-set-ocr-key');
-    if (setKeyBtn) setKeyBtn.onclick = function() { promptOcrKey(); };
     el.querySelectorAll('.health-rec').forEach(function(r) {
       r.onclick = function() { openBodyDetail(parseInt(r.dataset.idx, 10)); };
     });

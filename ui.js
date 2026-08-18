@@ -1,7 +1,7 @@
 /* global Core, Gist, Trades */
 'use strict';
 const LS_KEY = 'assetbook.v1';
-const BUILD_ID = '202608181825';
+const BUILD_ID = '202608181830';
 const $ = sel => document.querySelector(sel);
 
 let state = loadState();
@@ -135,6 +135,7 @@ function closeModalDom() {
 // Global modal helpers for external modules (health.js etc.)
 window._openModal = openModal;
 window._closeModal = closeModal;
+window._getAiKey = () => state.settings.aiKey || '';
 
 // ---------- 视图切换 ----------
 let currentTradeTab = 'ledger'; // ledger | bills | analytics
@@ -498,6 +499,11 @@ function renderSettings() {
     (state.settings.lockHash ? '<div class="btn-row" style="margin-top:6px"><button class="btn" id="btn-toggle-face">' +
       (state.settings.webauthnCredId ? '解绑面容/指纹' : '绑定面容/指纹') + '</button></div>' : '') +
     '</div>' +
+    '<div class="card"><h3>AI 服务</h3>' +
+    '<div class="muted small">百炼平台 API Key，用于拍照识别等 AI 功能</div>' +
+    '<div class="token-input-wrap"><input id="in-ai-key" type="password" placeholder="百炼 API Key" value="' + esc(s.aiKey || '') + '">' +
+    '<button type="button" class="token-eye" id="btn-ai-key-eye" title="显示/隐藏">' + svgIcon('eye') + '</button></div>' +
+    '<div class="btn-row" style="margin-top:6px"><button class="btn" id="btn-save-ai-key">保存</button></div></div>' +
     '<div class="card"><h3>数据</h3><div class="btn-row">' +
     '<button class="btn" id="btn-export">导出 JSON</button>' +
     '<button class="btn" id="btn-import">导入 JSON</button></div>' +
@@ -539,6 +545,18 @@ function renderSettings() {
     const isPw = inp.type === 'password';
     inp.type = isPw ? 'text' : 'password';
     btn.innerHTML = svgIcon(isPw ? 'eyeOff' : 'eye');
+  };
+  $('#btn-ai-key-eye').onclick = () => {
+    const inp = $('#in-ai-key');
+    const btn = $('#btn-ai-key-eye');
+    const isPw = inp.type === 'password';
+    inp.type = isPw ? 'text' : 'password';
+    btn.innerHTML = svgIcon(isPw ? 'eyeOff' : 'eye');
+  };
+  $('#btn-save-ai-key').onclick = () => {
+    state.settings.aiKey = $('#in-ai-key').value.trim();
+    saveState(); scheduleBackup();
+    alert('已保存');
   };
   $('#btn-save-backup').onclick = () => {
     state.settings.gistToken = $('#in-token').value.trim();
