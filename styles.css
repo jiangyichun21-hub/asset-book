@@ -90,7 +90,7 @@ body.scroll-locked { overflow: hidden; touch-action: none; }
 .form-two-col > * { min-width: 0; }
 .form-check { display: flex; gap: 14px; margin: 10px 0; flex-wrap: wrap; }
 .form-check label { display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--text); cursor: pointer; }
-.form-check input { width: auto; margin: 0; }
+.form-check input { display: inline-block; width: auto; margin: 0; }
 .card h3 { display: flex; align-items: center; gap: 8px; }
 .card h3 .badge { margin-left: auto; }
 .icon-btn { border: 0; background: none; font-size: 20px; padding: 6px; cursor: pointer; color: var(--text); }
@@ -135,7 +135,7 @@ details.group summary::-webkit-details-marker { display: none; }
 .seg { margin: 0 0 10px; }
 .seg-btn.on { background: var(--accent); color: #fff; }
 
-input, select { width: 100%; padding: 11px 12px; margin: 8px 0; border: 1px solid var(--line);
+input, select { display: block; width: 100%; padding: 11px 12px; margin: 8px 0; border: 1px solid var(--line);
   border-radius: 10px; font-size: 16px; background: #fafbfc; }
 .pick { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
 .pk { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center;
@@ -211,7 +211,7 @@ input, select { width: 100%; padding: 11px 12px; margin: 8px 0; border: 1px soli
 .trade-filter-body.open { display: block; }
 .trade-filter-row { display: flex; gap: 8px; margin-bottom: 8px; }
 .trade-filter-row:last-child { margin-bottom: 0; }
-.trade-filter-row input, .trade-filter-row select { flex: 1; padding: 8px 10px;
+.trade-filter-row input, .trade-filter-row select { display: inline-block; flex: 1; padding: 8px 10px;
   border: 1px solid var(--line); border-radius: 8px; font-size: 13px; background: var(--bg);
   color: var(--text); outline: none; margin: 0; width: auto; }
 .trade-filter-row input:focus, .trade-filter-row select:focus { border-color: var(--accent); }
