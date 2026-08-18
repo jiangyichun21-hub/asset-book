@@ -15,7 +15,7 @@ body { max-width: 520px; margin: 0 auto; padding-bottom: calc(72px + env(safe-ar
 .up { color: var(--up); }
 .down { color: var(--down); }
 
-#topbar { position: sticky; top: 0; z-index: 10; display: grid;
+#topbar { position: sticky; top: 0; z-index: 200; display: grid;
   grid-template-columns: 44px 1fr 44px; align-items: center;
   padding: calc(8px + env(safe-area-inset-top)) 12px 8px; background: var(--bg); }
 .topbar-right { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
@@ -151,7 +151,7 @@ input, select { width: 100%; padding: 11px 12px; margin: 8px 0; border: 1px soli
 .fab { width: 52px; height: 52px; border-radius: 50%; border: 0; background: var(--accent);
   color: #fff; font-size: 26px; cursor: pointer; margin-top: -22px; box-shadow: 0 4px 12px rgba(79,110,247,.4); }
 
-.overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 100;
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 250;
   display: flex; align-items: flex-end; justify-content: center; }
 .sheet { background: var(--card); width: 100%; max-width: 520px; border-radius: 18px 18px 0 0;
   padding: 20px 16px calc(20px + env(safe-area-inset-bottom)); max-height: 80vh; overflow-y: auto; overflow-x: hidden; }
