@@ -283,22 +283,10 @@ var Health = (function() {
   function render() {
     var el = document.getElementById('view-health');
     if (!el) return;
-    var html = '<div class="trade-tabs" id="health-tabs">' +
-      '<button class="trade-tab' + (tab === 'body' ? ' active' : '') + '" data-htab="body">体脂记录</button>' +
-      '<button class="trade-tab' + (tab === 'exercise' ? ' active' : '') + '" data-htab="exercise">运动日历</button></div>';
+    var html = '';
     html += '<div id="health-body"' + (tab !== 'body' ? ' class="hidden"' : '') + '>' + renderBodyTab() + '</div>';
     html += '<div id="health-exercise"' + (tab !== 'exercise' ? ' class="hidden"' : '') + '>' + renderExerciseTab() + '</div>';
     el.innerHTML = html;
-
-    // Tab switching
-    el.querySelectorAll('#health-tabs .trade-tab').forEach(function(btn) {
-      btn.onclick = function() {
-        tab = btn.dataset.htab;
-        el.querySelectorAll('.trade-tab').forEach(function(b) { b.classList.toggle('active', b === btn); });
-        document.getElementById('health-body').classList.toggle('hidden', tab !== 'body');
-        document.getElementById('health-exercise').classList.toggle('hidden', tab !== 'exercise');
-      };
-    });
 
     // Body events
     var addBody = document.getElementById('btn-add-body');
