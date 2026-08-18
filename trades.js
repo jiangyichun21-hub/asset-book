@@ -311,18 +311,28 @@ function renderChart() {
     days[d].profit += r.sellPrice - r.buyPrice + (r.cpsValid !== false ? r.cps : 0) - r.fee;
   });
   Object.keys(days).forEach(function(d) { days[d].spread = days[d].revenue - days[d].cost; });
-  var sorted = Object.keys(days).sort();
+  // Build complete date series (fill gaps with zeros)
+  var end = new Date();
+  var start;
   if (chartDays > 0) {
-    var cut = new Date(); cut.setDate(cut.getDate() - chartDays);
-    var cutStr = cut.toISOString().substring(0, 10);
-    sorted = sorted.filter(function(d) { return d >= cutStr; });
+    start = new Date(); start.setDate(start.getDate() - chartDays);
+  } else {
+    var sorted0 = Object.keys(days).sort();
+    start = sorted0.length ? new Date(sorted0[0] + 'T00:00:00') : new Date();
+  }
+  var labels = [], sorted = [];
+  for (var dt = new Date(start); dt <= end; dt.setDate(dt.getDate() + 1)) {
+    var ds = dt.toISOString().substring(0, 10);
+    sorted.push(ds);
+    labels.push(ds.substring(5));
+    if (!days[ds]) days[ds] = {count:0,cost:0,revenue:0,cps:0,profit:0,spread:0};
   }
   var datasets = [];
   activeMetrics.forEach(function(m) {
     var cfg = METRIC_CFG[m];
     datasets.push({
       label: cfg.label,
-      data: sorted.map(function(d) { return days[d] ? parseFloat(days[d][m].toFixed(2)) : 0; }),
+      data: sorted.map(function(d) { return parseFloat(days[d][m].toFixed(2)); }),
       borderColor: cfg.color, backgroundColor: cfg.color + '22',
       tension: 0.3, pointRadius: 3, pointHoverRadius: 5, yAxisID: cfg.axis, fill: false
     });
@@ -332,7 +342,7 @@ function renderChart() {
   if (!canvas) return;
   chartInstance = new Chart(canvas, {
     type: 'line',
-    data: { labels: sorted.map(function(d) { return d.substring(5); }), datasets: datasets },
+    data: { labels: labels, datasets: datasets },
     options: {
       responsive: true, maintainAspectRatio: false,
       interaction: { mode: 'index', intersect: false },
