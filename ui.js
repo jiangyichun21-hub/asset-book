@@ -1,7 +1,7 @@
 /* global Core, Gist, Trades */
 'use strict';
 const LS_KEY = 'assetbook.v1';
-const BUILD_ID = '202608181635';
+const BUILD_ID = '202608181650';
 const $ = sel => document.querySelector(sel);
 
 let state = loadState();
@@ -1227,6 +1227,22 @@ async function pullFromGist(silent) {
     });
     pull = 0;
   });
+})();
+
+// ---------- FAB scroll hide/show ----------
+(function() {
+  let scrollTimer = null;
+  const fab = $('#fab-trade');
+  if (!fab) return;
+
+  window.addEventListener('scroll', () => {
+    if (currentView !== 'trade') return;
+    fab.classList.add('fab-scrolling');
+    clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(() => {
+      fab.classList.remove('fab-scrolling');
+    }, 150);
+  }, { passive: true });
 })();
 
 // On-open silent Gist pull
