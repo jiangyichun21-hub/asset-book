@@ -121,8 +121,8 @@ function renderList() {
       '</div>' +
       '<div class="trade-card">' +
       '<div class="tc-top"><div class="tc-name">'+esc(r.name)+'</div><div class="tc-profit '+pCls+'">'+pTxt+'</div></div>' +
-      '<div class="tc-meta">'+platformTag(r.platform)+'<span>\u4e70 '+fmt(r.buyPrice)+'</span><span>\u5356 '+(r.sellPrice>0?fmt(r.sellPrice):'-')+'</span><span>'+r.date.substring(0,10)+'</span></div>' +
-      '<div class="tc-status">'+(r.shipped?'<span class="tc-badge shipped">\u5df2\u53d1\u8d27</span>':'<span class="tc-badge unshipped">\u672a\u53d1\u8d27</span>')+(r.paid?'<span class="tc-badge paid">\u5df2\u56de\u6b3e</span>':'<span class="tc-badge unpaid">\u672a\u56de\u6b3e</span>')+'</div>' +
+      '<div class="tc-meta"><span>\u4e70 '+fmt(r.buyPrice)+'</span><span>\u5356 '+(r.sellPrice>0?fmt(r.sellPrice):'-')+'</span><span>'+r.date.substring(0,10)+'</span></div>' +
+      '<div class="tc-bottom">'+platformTag(r.platform)+'<span style="margin-left:auto"></span>'+(r.shipped?'<span class="tc-badge shipped">\u5df2\u53d1\u8d27</span>':'<span class="tc-badge unshipped">\u672a\u53d1\u8d27</span>')+(r.paid?'<span class="tc-badge paid">\u5df2\u56de\u6b3e</span>':'<span class="tc-badge unpaid">\u672a\u56de\u6b3e</span>')+'</div>' +
       '<div class="tc-detail" id="td-'+i+'">' +
         '<div class="dl-row"><span>\u624b\u7eed\u8d39</span><span class="dl-val">'+fmt(r.fee)+'</span></div>' +
         '<div class="dl-row"><span>CPS\u8fd4\u73b0</span><span class="dl-val">'+fmt(r.cps)+(r.cpsValid?'':' (\u65e0\u6548)')+'</span></div>' +
