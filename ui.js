@@ -1,7 +1,7 @@
 /* global Core, Gist, Trades */
 'use strict';
 const LS_KEY = 'assetbook.v1';
-const BUILD_ID = '202608181615';
+const BUILD_ID = '202608181620';
 const $ = sel => document.querySelector(sel);
 
 let state = loadState();
@@ -469,6 +469,16 @@ function renderSettings() {
     '<div class="btn-row"><button class="btn" id="btn-save-backup">保存配置</button>' +
     '<button class="btn" id="btn-backup-now">立即备份</button>' +
     '<button class="btn" id="btn-restore">从备份恢复</button></div></div>' +
+    '<div class="card"><h3>密码锁</h3>' +
+    '<div class="muted small">开启后每次进入资产页面金额默认隐藏，点击眼睛图标需密码解锁</div>' +
+    '<div class="btn-row" style="margin-top:10px">' +
+    (state.settings.lockHash
+      ? '<button class="btn" id="btn-change-pin">修改密码</button><button class="btn danger" id="btn-remove-lock">移除密码</button>'
+      : '<button class="btn primary" id="btn-set-pin">设置密码</button>') +
+    '</div>' +
+    (state.settings.lockHash ? '<div class="btn-row" style="margin-top:6px"><button class="btn" id="btn-toggle-face">' +
+      (state.settings.webauthnCredId ? '解绑面容/指纹' : '绑定面容/指纹') + '</button></div>' : '') +
+    '</div>' +
     '<div class="card"><h3>数据</h3><div class="btn-row">' +
     '<button class="btn" id="btn-export">导出 JSON</button>' +
     '<button class="btn" id="btn-import">导入 JSON</button></div>' +
@@ -478,19 +488,7 @@ function renderSettings() {
   let moduleHtml = '';
   if (settingsFromView === 'asset') {
     const archived = state.accounts.filter(a => a.archived);
-    const lockSet = !!state.settings.lockHash;
-    const faceSet = !!state.settings.webauthnCredId;
     moduleHtml =
-      '<div class="card"><h3>密码锁</h3>' +
-      '<div class="muted small">开启后每次进入资产页面金额默认隐藏，点击眼睛图标需密码解锁</div>' +
-      '<div class="btn-row" style="margin-top:10px">' +
-      (lockSet
-        ? '<button class="btn" id="btn-change-pin">修改密码</button><button class="btn danger" id="btn-remove-lock">移除密码</button>'
-        : '<button class="btn primary" id="btn-set-pin">设置密码</button>') +
-      '</div>' +
-      (lockSet ? '<div class="btn-row" style="margin-top:6px"><button class="btn" id="btn-toggle-face">' +
-        (faceSet ? '解绑面容/指纹' : '绑定面容/指纹') + '</button></div>' : '') +
-      '</div>' +
       '<div class="card"><h3>分组管理<span class="muted small" style="margin-left:auto;font-weight:normal">拖拽排序</span></h3>' +
       state.groups.slice().sort((a, b) => a.order - b.order).map(g =>
         '<div class="row group-item" data-id="' + g.id + '">' +
@@ -550,16 +548,18 @@ function renderSettings() {
     reader.readAsText(file);
   };
 
+  // Lock settings (common)
+  const _setPin = $('#btn-set-pin');
+  const _changePin = $('#btn-change-pin');
+  const _removeLock = $('#btn-remove-lock');
+  const _toggleFace = $('#btn-toggle-face');
+  if (_setPin) _setPin.onclick = openPinCollect;
+  if (_changePin) _changePin.onclick = () => { requestUnlock(openPinCollect); };
+  if (_removeLock) _removeLock.onclick = removeLock;
+  if (_toggleFace) _toggleFace.onclick = toggleFace;
+
   // Bind module-specific events
   if (settingsFromView === 'asset') {
-    const _setPin = $('#btn-set-pin');
-    const _changePin = $('#btn-change-pin');
-    const _removeLock = $('#btn-remove-lock');
-    const _toggleFace = $('#btn-toggle-face');
-    if (_setPin) _setPin.onclick = openPinCollect;
-    if (_changePin) _changePin.onclick = () => { requestUnlock(openPinCollect); };
-    if (_removeLock) _removeLock.onclick = removeLock;
-    if (_toggleFace) _toggleFace.onclick = toggleFace;
     $('#btn-add-group').onclick = () => {
       const name = prompt('分组名称'); if (!name) return;
       try { Core.addGroup(state, name); persist(); } catch (e) { alert(e.message); }
