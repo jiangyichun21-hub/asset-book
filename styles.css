@@ -185,6 +185,7 @@ input, select { width: 100%; padding: 11px 12px; margin: 8px 0; border: 1px soli
 .dd-item .dd-icon svg { width: 18px; height: 18px; }
 .dd-divider { height: 1px; background: var(--line); margin: 0 12px; }
 #dd-overlay { display: none; position: fixed; inset: 0; z-index: 150; }
+#dd-overlay.open { display: block; }
 
 /* ===== Trade View ===== */
 .trade-tabs { display: flex; background: var(--card); border-radius: 12px;
