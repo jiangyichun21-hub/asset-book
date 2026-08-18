@@ -128,7 +128,7 @@ input, select { width: 100%; padding: 11px 12px; margin: 8px 0; border: 1px soli
 
 #tabbar { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%;
   max-width: 520px; display: flex; align-items: center; justify-content: space-around;
-  background: var(--card); border-top: 1px solid var(--line);
+  background: var(--card); border-top: 1px solid var(--line); z-index: 10;
   padding: 6px 0 calc(6px + env(safe-area-inset-bottom)); }
 .tab { border: 0; background: none; font-size: 14px; color: var(--muted); padding: 8px 26px; cursor: pointer; }
 .tab.active { color: var(--accent); font-weight: 600; }

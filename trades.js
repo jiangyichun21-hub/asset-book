@@ -107,9 +107,8 @@ function platformTag(p) {
 // ===== Trade List =====
 function renderList() {
   var list = getFiltered();
-  console.log('[DEBUG] renderList: list length =', list.length, 'first item:', list[0] && list[0].name);
   var el = document.getElementById('trade-list');
-  if (!el) { console.log('[DEBUG] renderList: element not found!'); return; }
+  if (!el) return;
   el.innerHTML = list.map(function(r, i) {
     var profit = r.sellPrice > 0 ? r.sellPrice - r.buyPrice + (r.cpsValid !== false ? r.cps : 0) - r.fee : 0;
     var pCls = r.sellPrice === 0 ? 'zero' : (profit >= 0 ? 'positive' : 'negative');

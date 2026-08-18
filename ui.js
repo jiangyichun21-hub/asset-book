@@ -1,7 +1,7 @@
 /* global Core, Gist, Trades */
 'use strict';
 const LS_KEY = 'assetbook.v1';
-const BUILD_ID = '202608181710';
+const BUILD_ID = '202608181720';
 const $ = sel => document.querySelector(sel);
 
 let state = loadState();
@@ -1109,12 +1109,9 @@ function openTradeForm(record) {
       refunded: !!r.refunded
     };
     if (!patch.name) { alert('请填写商品名'); return; }
-    console.log('[DEBUG] Adding trade:', patch.name);
     if (isEdit) Trades.updateRecord(r, patch);
     else Trades.addRecord(patch);
-    console.log('[DEBUG] Record count after add:', Trades.getRecordCount());
     Trades.refresh();
-    console.log('[DEBUG] Refreshed');
     closeModal();
     toast(isEdit ? '已保存' : '已添加');
     scheduleBackup();
