@@ -135,19 +135,19 @@ function renderList() {
   var cnt = document.getElementById('trade-count');
   if (cnt) cnt.textContent = '\u5171 ' + list.length + ' \u7b14';
 
-  // Swipe-to-reveal actions (WeChat-style smooth drag)
+  // Swipe-to-reveal actions (smooth drag)
   var SW_OPEN = 120;
-  var swActive = null; // currently swiped wrap
+  var swActive = null;
   function closeAllSwipes() {
     if (swActive) {
-      swActive.querySelector('.trade-card-row').style.transform = '';
-      swActive.querySelector('.trade-card-row').style.transition = 'transform 0.25s ease';
+      var c = swActive.querySelector('.trade-card');
+      c.style.transform = '';
+      c.style.transition = 'transform 0.25s ease';
       swActive.classList.remove('swiped');
       swActive = null;
     }
   }
   el.querySelectorAll('.trade-card-wrap').forEach(function(wrap) {
-    var row = wrap.querySelector('.trade-card-row');
     var card = wrap.querySelector('.trade-card');
     var startX = 0, currentX = 0, dragging = false, isOpen = false;
 
@@ -155,8 +155,7 @@ function renderList() {
       startX = e.touches[0].clientX;
       currentX = startX;
       dragging = true;
-      row.style.transition = 'none';
-      // If another card is open, close it first
+      card.style.transition = 'none';
       if (swActive && swActive !== wrap) closeAllSwipes();
     }, { passive: true });
 
@@ -166,32 +165,29 @@ function renderList() {
       var dx = currentX - startX;
       if (isOpen) dx -= SW_OPEN;
       dx = Math.min(0, Math.max(-SW_OPEN * 1.3, dx));
-      row.style.transform = 'translateX(' + dx + 'px)';
+      card.style.transform = 'translateX(' + dx + 'px)';
     }, { passive: true });
 
     wrap.addEventListener('touchend', function() {
       if (!dragging) return;
       dragging = false;
       var dx = currentX - startX;
-      row.style.transition = 'transform 0.25s ease';
+      card.style.transition = 'transform 0.25s ease';
       if (!isOpen && dx < -30) {
-        // Open
-        row.style.transform = 'translateX(-' + SW_OPEN + 'px)';
+        card.style.transform = 'translateX(-' + SW_OPEN + 'px)';
         wrap.classList.add('swiped');
         isOpen = true;
         swActive = wrap;
       } else if (isOpen && dx > 30) {
-        // Close
-        row.style.transform = '';
+        card.style.transform = '';
         wrap.classList.remove('swiped');
         isOpen = false;
         if (swActive === wrap) swActive = null;
       } else {
-        // Snap back
         if (isOpen) {
-          row.style.transform = 'translateX(-' + SW_OPEN + 'px)';
+          card.style.transform = 'translateX(-' + SW_OPEN + 'px)';
         } else {
-          row.style.transform = '';
+          card.style.transform = '';
           wrap.classList.remove('swiped');
         }
       }
