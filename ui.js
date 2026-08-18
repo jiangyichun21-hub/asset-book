@@ -1,7 +1,7 @@
 /* global Core, Gist, Trades */
 'use strict';
 const LS_KEY = 'assetbook.v1';
-const BUILD_ID = '202608181730';
+const BUILD_ID = '202608181735';
 const $ = sel => document.querySelector(sel);
 
 let state = loadState();
@@ -591,34 +591,21 @@ async function forceUpdate() {
   const btn = $('#btn-check-update');
   if (btn) { btn.disabled = true; btn.textContent = '正在检查…'; }
   try {
-    let hasUpdate = false;
-    if ('serviceWorker' in navigator) {
-      const reg = await navigator.serviceWorker.getRegistration();
-      if (reg) {
-        // Trigger update check
-        await reg.update();
-        // Check if there's a waiting worker (means new version available)
-        if (reg.waiting) {
-          hasUpdate = true;
-          if (btn) btn.textContent = '正在更新…';
-          reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-          // Wait for new SW to activate
-          await new Promise(r => setTimeout(r, 800));
-        }
-      }
-    }
-    if (!hasUpdate) {
-      if (btn) { btn.textContent = '已是最新版本'; btn.disabled = false; setTimeout(() => { if (btn) btn.textContent = '检查更新'; }, 2000); }
-      return;
-    }
-    // Purge all caches so the reload fetches fresh assets
+    // Clear all SW caches to force fresh fetch
     if ('caches' in window) {
       const keys = await caches.keys();
       await Promise.all(keys.map(k => caches.delete(k)));
     }
-    // Show success before reload
-    if (btn) btn.textContent = '更新成功，正在刷新…';
-    setTimeout(() => location.reload(), 600);
+    // Trigger SW update check
+    if ('serviceWorker' in navigator) {
+      const reg = await navigator.serviceWorker.getRegistration();
+      if (reg) await reg.update();
+    }
+    // Force reload bypassing browser cache
+    if (btn) btn.textContent = '正在刷新…';
+    setTimeout(() => {
+      location.reload();
+    }, 300);
   } catch (e) {
     if (btn) { btn.disabled = false; btn.textContent = '检查更新'; }
     alert('更新失败：' + (e && e.message ? e.message : String(e)));
