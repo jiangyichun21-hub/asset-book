@@ -1,7 +1,7 @@
 /* global Core, Gist, Trades */
 'use strict';
 const LS_KEY = 'assetbook.v1';
-const BUILD_ID = '202608181207';
+const BUILD_ID = '202608181212';
 const $ = sel => document.querySelector(sel);
 
 let state = loadState();
@@ -26,7 +26,10 @@ function fmtMoney(n) {
 }
 function fmtAgo(ts) {
   if (!ts) return '未记录';
-  const d = Math.floor((Date.now() - ts) / 86400000);
+  const now = new Date();
+  const then = new Date(ts);
+  const midnight = dt => new Date(dt.getFullYear(), dt.getMonth(), dt.getDate()).getTime();
+  const d = Math.round((midnight(now) - midnight(then)) / 86400000);
   return d <= 0 ? '今天' : d === 1 ? '昨天' : d + ' 天前';
 }
 function isStale(ts) { return !ts || Date.now() - ts > 30 * 86400000; }
