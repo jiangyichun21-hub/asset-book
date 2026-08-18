@@ -272,3 +272,18 @@ input, select { width: 100%; padding: 11px 12px; margin: 8px 0; border: 1px soli
 .pin-key:active { background: #eef0f4; }
 .pin-key.pin-fn { border: none; background: none; }
 .pin-key.pin-fn:active { background: #eef0f4; border-radius: 50%; }
+
+/* ===== Health Module ===== */
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.cal-head { text-align: center; font-size: 11px; color: var(--muted); padding: 4px 0; font-weight: 600; }
+.cal-cell { text-align: center; padding: 8px 0; border-radius: 8px; cursor: pointer; position: relative;
+  transition: background 0.15s; min-height: 36px; display: flex; align-items: center; justify-content: center; }
+.cal-cell.empty { cursor: default; }
+.cal-cell:active:not(.empty) { background: #eef0f4; }
+.cal-cell.today { background: #e5e7fd; }
+.cal-cell.has-ex { background: #e6f7ef; }
+.cal-cell.today.has-ex { background: #d4edda; }
+.cal-day { font-size: 14px; font-weight: 500; }
+.cal-dot { position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%);
+  width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
+.health-rec:active { background: #f5f6f8; }
