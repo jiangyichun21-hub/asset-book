@@ -1,7 +1,7 @@
 /* global Core, Gist, Trades */
 'use strict';
 const LS_KEY = 'assetbook.v1';
-const BUILD_ID = '202608181155';
+const BUILD_ID = '202608181207';
 const $ = sel => document.querySelector(sel);
 
 let state = loadState();
@@ -387,8 +387,8 @@ function startInventory() {
   step();
 }
 // ---------- 趋势 ----------
-const RANGES = [{ label: '1月', days: 30 }, { label: '3月', days: 90 },
-                { label: '1年', days: 365 }, { label: '全部', days: 0 }];
+const RANGES = [{ label: '近1月', days: 30 }, { label: '近3月', days: 90 },
+                { label: '近1年', days: 365 }, { label: '全部', days: 0 }];
 function renderTrend() {
   const series = Core.dailySeries(state, { days: trendRange, accountId: trendAccount || null });
   const stats = Core.rangeStats(series);
