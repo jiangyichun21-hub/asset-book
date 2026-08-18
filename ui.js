@@ -1,10 +1,12 @@
 /* global Core, Gist, Trades */
 'use strict';
 const LS_KEY = 'assetbook.v1';
-const BUILD_ID = '202608181212';
+const BUILD_ID = '202608181530';
 const $ = sel => document.querySelector(sel);
 
 let state = loadState();
+// If lock PIN is configured, always start hidden
+if (state.settings.lockHash) state.settings.hideAmounts = true;
 let currentTab = 'assets';
 let currentView = 'asset'; // 'asset' | 'trade'
 let settingsFromView = 'asset'; // remember where settings was opened from
@@ -476,7 +478,19 @@ function renderSettings() {
   let moduleHtml = '';
   if (settingsFromView === 'asset') {
     const archived = state.accounts.filter(a => a.archived);
+    const lockSet = !!state.settings.lockHash;
+    const faceSet = !!state.settings.webauthnCredId;
     moduleHtml =
+      '<div class="card"><h3>密码锁</h3>' +
+      '<div class="muted small">开启后每次进入资产页面金额默认隐藏，点击眼睛图标需密码解锁</div>' +
+      '<div class="btn-row" style="margin-top:10px">' +
+      (lockSet
+        ? '<button class="btn" id="btn-change-pin">修改密码</button><button class="btn danger" id="btn-remove-lock">移除密码</button>'
+        : '<button class="btn primary" id="btn-set-pin">设置密码</button>') +
+      '</div>' +
+      (lockSet ? '<div class="btn-row" style="margin-top:6px"><button class="btn" id="btn-toggle-face">' +
+        (faceSet ? '解绑面容/指纹' : '绑定面容/指纹') + '</button></div>' : '') +
+      '</div>' +
       '<div class="card"><h3>分组管理<span class="muted small" style="margin-left:auto;font-weight:normal">拖拽排序</span></h3>' +
       state.groups.slice().sort((a, b) => a.order - b.order).map(g =>
         '<div class="row group-item" data-id="' + g.id + '">' +
@@ -538,6 +552,14 @@ function renderSettings() {
 
   // Bind module-specific events
   if (settingsFromView === 'asset') {
+    const _setPin = $('#btn-set-pin');
+    const _changePin = $('#btn-change-pin');
+    const _removeLock = $('#btn-remove-lock');
+    const _toggleFace = $('#btn-toggle-face');
+    if (_setPin) _setPin.onclick = openPinCollect;
+    if (_changePin) _changePin.onclick = () => { requestUnlock(openPinCollect); };
+    if (_removeLock) _removeLock.onclick = removeLock;
+    if (_toggleFace) _toggleFace.onclick = toggleFace;
     $('#btn-add-group').onclick = () => {
       const name = prompt('分组名称'); if (!name) return;
       try { Core.addGroup(state, name); persist(); } catch (e) { alert(e.message); }
@@ -726,8 +748,234 @@ async function exportJSON() {
   saveState(); renderSettings();
 }
 
+// ---------- 密码锁 ----------
+const LOCK_ICONS = {
+  face: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px"><path d="M4 8V6a2 2 0 0 1 2-2h2"/><path d="M4 16v2a2 2 0 0 0 2 2h2"/><path d="M16 4h2a2 2 0 0 1 2 2v2"/><path d="M16 20h2a2 2 0 0 0 2-2v-2"/><line x1="9" y1="10" x2="9" y2="11"/><line x1="15" y1="10" x2="15" y2="11"/><path d="M9 15s1 1.5 3 1.5S15 15 15 15"/></svg>',
+  back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:22px;height:22px"><path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"/><line x1="18" y1="9" x2="12" y2="15"/><line x1="12" y1="9" x2="18" y2="15"/></svg>'
+};
+function randSalt() {
+  const b = crypto.getRandomValues(new Uint8Array(16));
+  let s = ''; for (let i = 0; i < b.length; i++) s += String.fromCharCode(b[i]);
+  return btoa(s);
+}
+async function hashPin(pin, salt) {
+  const enc = new TextEncoder().encode(salt + ':' + pin);
+  const buf = await crypto.subtle.digest('SHA-256', enc);
+  const b = new Uint8Array(buf); let s = '';
+  for (let i = 0; i < b.length; i++) s += b[i].toString(16).padStart(2, '0');
+  return s;
+}
+async function verifyPin(pin) {
+  const s = state.settings;
+  if (!s.lockHash) return false;
+  const h = await hashPin(pin, s.lockSalt);
+  return h === s.lockHash;
+}
+const hasWebAuthn = () => !!(window.PublicKeyCredential && navigator.credentials && navigator.credentials.create);
+
+// WebAuthn 注册（绑定面容/指纹）
+async function registerWebAuthn() {
+  if (!hasWebAuthn()) throw new Error('此设备不支持面容/指纹');
+  const challenge = crypto.getRandomValues(new Uint8Array(32));
+  const userId = crypto.getRandomValues(new Uint8Array(16));
+  const cred = await navigator.credentials.create({
+    publicKey: {
+      challenge, rp: { name: 'eNook', id: location.hostname },
+      user: { id: userId, name: 'enook-user', displayName: 'eNook' },
+      pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
+      authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required' },
+      timeout: 60000, attestation: 'none'
+    }
+  });
+  if (!cred) throw new Error('注册取消');
+  return Core.bufToB64 ? Core.bufToB64(cred.rawId) : bufToB64Local(cred.rawId);
+}
+function bufToB64Local(buf) {
+  const b = new Uint8Array(buf); let s = '';
+  for (let i = 0; i < b.length; i++) s += String.fromCharCode(b[i]);
+  return btoa(s);
+}
+function b64ToBufLocal(str) {
+  const bin = atob(str); const b = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) b[i] = bin.charCodeAt(i);
+  return b;
+}
+// WebAuthn 验证
+async function verifyWebAuthn() {
+  const s = state.settings;
+  if (!s.webauthnCredId || !hasWebAuthn()) return false;
+  const challenge = crypto.getRandomValues(new Uint8Array(32));
+  const assertion = await navigator.credentials.get({
+    publicKey: {
+      challenge,
+      allowCredentials: [{ type: 'public-key', id: b64ToBufLocal(s.webauthnCredId), transports: ['internal'] }],
+      userVerification: 'required', timeout: 60000
+    }
+  });
+  return !!assertion;
+}
+
+// 解锁流程：显示 PIN 面板（若已绑面容则自动尝试面容）
+function requestUnlock(onSuccess) {
+  const s = state.settings;
+  if (!s.lockHash) { onSuccess(); return; }
+  openPinPad({
+    title: '输入密码解锁',
+    verify: verifyPin,
+    allowFace: !!s.webauthnCredId,
+    onSuccess: () => { closeModal(); onSuccess(); }
+  });
+  // 自动尝试面容
+  if (s.webauthnCredId && hasWebAuthn()) {
+    setTimeout(() => {
+      verifyWebAuthn().then(ok => {
+        if (ok && $('#modal-root').innerHTML) { closeModal(); onSuccess(); }
+      }).catch(() => {});
+    }, 350);
+  }
+}
+
+// 通用 PIN 输入面板
+function openPinPad(opts) {
+  let pin = '';
+  const dots = () => {
+    let h = '';
+    for (let i = 0; i < 6; i++) h += '<span class="pin-dot' + (i < pin.length ? ' on' : '') + '"></span>';
+    return h;
+  };
+  const keys = ['1','2','3','4','5','6','7','8','9', opts.allowFace ? 'face' : '', '0', 'back'];
+  const html = '<h3 class="center">' + esc(opts.title) + '</h3>' +
+    (opts.subtitle ? '<div class="muted center small">' + esc(opts.subtitle) + '</div>' : '') +
+    '<div class="pin-dots" id="pin-dots">' + dots() + '</div>' +
+    '<div class="pin-err" id="pin-err"></div>' +
+    '<div class="pin-pad">' + keys.map(k => {
+      if (k === '') return '<span></span>';
+      if (k === 'back') return '<button class="pin-key pin-fn" data-k="back">' + LOCK_ICONS.back + '</button>';
+      if (k === 'face') return '<button class="pin-key pin-fn" data-k="face">' + LOCK_ICONS.face + '</button>';
+      return '<button class="pin-key" data-k="' + k + '">' + k + '</button>';
+    }).join('') + '</div>' +
+    '<div class="btn-row"><button class="btn" id="pin-cancel">取消</button></div>';
+  openModal(html);
+  const refresh = () => { const d = $('#pin-dots'); if (d) d.innerHTML = dots(); };
+  const showErr = msg => {
+    const e = $('#pin-err'); if (e) e.textContent = msg || '';
+    const dd = $('#pin-dots'); if (dd) { dd.classList.add('shake'); setTimeout(() => dd.classList.remove('shake'), 400); }
+  };
+  const submit = async () => {
+    const ok = await opts.verify(pin);
+    if (ok) { opts.onSuccess(pin); }
+    else { pin = ''; refresh(); showErr('密码错误'); }
+  };
+  $('#pin-cancel').onclick = closeModal;
+  document.querySelectorAll('#modal-root .pin-key').forEach(b => {
+    b.onclick = async () => {
+      const k = b.dataset.k;
+      if (k === 'back') { pin = pin.slice(0, -1); refresh(); return; }
+      if (k === 'face') {
+        try { const ok = await verifyWebAuthn(); if (ok) { closeModal(); opts.onSuccess('__face__'); } else showErr('面容验证失败'); }
+        catch (e) { showErr('面容验证已取消'); }
+        return;
+      }
+      if (pin.length >= 6) return;
+      pin += k; refresh();
+      if (pin.length >= (opts.minLen || 4)) {
+        // 4~6 位：4 位起可校验，若命中即通过；否则等更多位
+        if (opts.verify === verifyPin) { if (await opts.verify(pin)) opts.onSuccess(pin); }
+      }
+      if (pin.length === 6 && opts.verify !== verifyPin) submit();
+    };
+  });
+}
+
+// 设置/修改 PIN：带「确认」按钮的 PIN 采集面板
+function openPinCollect() {
+  let pin = '', stage = 1, first = '';
+  const dots = () => { let h=''; for (let i=0;i<6;i++) h+='<span class="pin-dot'+(i<pin.length?' on':'')+'"></span>'; return h; };
+  const render = () => {
+    const html = '<h3 class="center">' + (stage === 1 ? '设置解锁密码' : '再次输入确认') + '</h3>' +
+      '<div class="muted center small">' + (stage === 1 ? '4~6 位数字' : '确认新密码') + '</div>' +
+      '<div class="pin-dots" id="pin-dots">' + dots() + '</div>' +
+      '<div class="pin-err" id="pin-err"></div>' +
+      '<div class="pin-pad">' +
+      ['1','2','3','4','5','6','7','8','9','','0','back'].map(k => {
+        if (k === '') return '<span></span>';
+        if (k === 'back') return '<button class="pin-key pin-fn" data-k="back">' + LOCK_ICONS.back + '</button>';
+        return '<button class="pin-key" data-k="' + k + '">' + k + '</button>';
+      }).join('') + '</div>' +
+      '<div class="btn-row"><button class="btn" id="pin-cancel">取消</button>' +
+      '<button class="btn primary" id="pin-ok">确认</button></div>';
+    openModal(html);
+    const refresh = () => { const d = $('#pin-dots'); if (d) d.innerHTML = dots(); };
+    const showErr = m => { const e=$('#pin-err'); if(e)e.textContent=m||''; const dd=$('#pin-dots'); if(dd){dd.classList.add('shake');setTimeout(()=>dd.classList.remove('shake'),400);} };
+    $('#pin-cancel').onclick = closeModal;
+    document.querySelectorAll('#modal-root .pin-key').forEach(b => {
+      b.onclick = () => {
+        const k = b.dataset.k;
+        if (k === 'back') { pin = pin.slice(0, -1); refresh(); return; }
+        if (pin.length >= 6) return;
+        pin += k; refresh();
+      };
+    });
+    $('#pin-ok').onclick = async () => {
+      if (pin.length < 4) { showErr('至少 4 位'); return; }
+      if (stage === 1) { first = pin; pin = ''; stage = 2; render(); }
+      else {
+        if (pin !== first) { pin = ''; showErr('两次不一致，请重设'); stage = 1; setTimeout(render, 500); return; }
+        const salt = randSalt();
+        state.settings.lockSalt = salt;
+        state.settings.lockHash = await hashPin(first, salt);
+        state.settings.hideAmounts = true;
+        saveState(); scheduleBackup(); closeModal(); renderAll();
+        renderSettings();
+        alert('密码已设置，下次进入将默认隐藏金额');
+      }
+    };
+  };
+  render();
+}
+// 移除密码锁
+function removeLock() {
+  requestUnlock(() => {
+    state.settings.lockHash = '';
+    state.settings.lockSalt = '';
+    state.settings.webauthnCredId = '';
+    state.settings.hideAmounts = false;
+    saveState(); scheduleBackup(); renderAll(); renderSettings();
+    alert('已移除密码锁');
+  });
+}
+// 绑定/解绑面容
+async function toggleFace() {
+  const s = state.settings;
+  if (s.webauthnCredId) {
+    s.webauthnCredId = ''; saveState(); scheduleBackup(); renderSettings();
+    alert('已解绑面容/指纹');
+    return;
+  }
+  // 绑定前先验证 PIN
+  requestUnlock(async () => {
+    try {
+      const credId = await registerWebAuthn();
+      s.webauthnCredId = credId; saveState(); scheduleBackup(); renderSettings();
+      alert('已绑定面容/指纹');
+    } catch (e) { alert('绑定失败：' + (e && e.message ? e.message : e)); }
+  });
+}
+
 // ---------- 启动 ----------
-$('#btn-eye').onclick = () => { state.settings.hideAmounts = !state.settings.hideAmounts; saveState(); renderAll(); };
+$('#btn-eye').onclick = () => {
+  if (!state.settings.hideAmounts) {
+    // 当前可见 → 直接隐藏，无需验证
+    state.settings.hideAmounts = true; saveState(); renderAll(); return;
+  }
+  // 当前隐藏 → 需要解锁
+  if (!state.settings.lockHash) {
+    // 未设密码：直接显示（并提示可在设置里加锁）
+    state.settings.hideAmounts = false; saveState(); renderAll();
+    return;
+  }
+  requestUnlock(() => { state.settings.hideAmounts = false; saveState(); renderAll(); });
+};
 $('#btn-settings').onclick = openSettings;
 
 // Title dropdown navigation

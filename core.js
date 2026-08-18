@@ -19,7 +19,8 @@
       accounts: [],
       snapshots: [],
       settings: { hideAmounts: false, gistToken: '', gistId: '', passphrase: '',
-                  lastBackupAt: 0, lastBackupStatus: '', lastExportAt: 0 },
+                  lastBackupAt: 0, lastBackupStatus: '', lastExportAt: 0,
+                  lockHash: '', lockSalt: '', webauthnCredId: '' },
       createdAt: now
     };
   }

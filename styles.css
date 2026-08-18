@@ -247,3 +247,19 @@ input, select { width: 100%; padding: 11px 12px; margin: 8px 0; border: 1px soli
 .settings-section-title { font-size: 13px; font-weight: 600; color: var(--muted);
   text-transform: uppercase; letter-spacing: 0.5px; margin: 16px 0 8px; padding-left: 4px; }
 .settings-section-title:first-child { margin-top: 0; }
+
+/* ===== PIN Pad ===== */
+.pin-dots { display: flex; justify-content: center; gap: 12px; margin: 18px 0 6px; }
+.pin-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--line); background: transparent; transition: background 0.15s; }
+.pin-dot.on { background: var(--accent); border-color: var(--accent); }
+.pin-err { text-align: center; font-size: 13px; color: var(--danger); min-height: 20px; margin-bottom: 6px; }
+.pin-dots.shake { animation: pinShake 0.35s ease; }
+@keyframes pinShake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-8px)} 40%{transform:translateX(8px)} 60%{transform:translateX(-6px)} 80%{transform:translateX(4px)} }
+.pin-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 0 16px; margin-top: 10px; }
+.pin-key { width: 64px; height: 64px; border-radius: 50%; border: 1px solid var(--line);
+  background: var(--card); font-size: 24px; font-weight: 500; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; justify-self: center;
+  transition: background 0.12s; user-select: none; -webkit-user-select: none; }
+.pin-key:active { background: #eef0f4; }
+.pin-key.pin-fn { border: none; background: none; }
+.pin-key.pin-fn:active { background: #eef0f4; border-radius: 50%; }
