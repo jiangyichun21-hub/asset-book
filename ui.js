@@ -1,7 +1,7 @@
 /* global Core, Gist, Trades */
 'use strict';
 const LS_KEY = 'assetbook.v1';
-const BUILD_ID = '202608181700';
+const BUILD_ID = '202608181710';
 const $ = sel => document.querySelector(sel);
 
 let state = loadState();
@@ -589,26 +589,36 @@ function renderSettings() {
 let backupTimer = 0;
 async function forceUpdate() {
   const btn = $('#btn-check-update');
-  if (btn) { btn.disabled = true; btn.textContent = '检查中…'; }
+  if (btn) { btn.disabled = true; btn.textContent = '正在检查…'; }
   try {
+    let hasUpdate = false;
     if ('serviceWorker' in navigator) {
       const reg = await navigator.serviceWorker.getRegistration();
       if (reg) {
         // Trigger update check
         await reg.update();
-        // If there's a waiting worker, tell it to skip waiting
-        if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-        // Wait a beat for the new SW to install/activate
-        await new Promise(r => setTimeout(r, 500));
+        // Check if there's a waiting worker (means new version available)
+        if (reg.waiting) {
+          hasUpdate = true;
+          if (btn) btn.textContent = '正在更新…';
+          reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+          // Wait for new SW to activate
+          await new Promise(r => setTimeout(r, 800));
+        }
       }
+    }
+    if (!hasUpdate) {
+      if (btn) { btn.textContent = '已是最新版本'; btn.disabled = false; setTimeout(() => { if (btn) btn.textContent = '检查更新'; }, 2000); }
+      return;
     }
     // Purge all caches so the reload fetches fresh assets
     if ('caches' in window) {
       const keys = await caches.keys();
       await Promise.all(keys.map(k => caches.delete(k)));
     }
-    // Hard reload
-    location.reload();
+    // Show success before reload
+    if (btn) btn.textContent = '更新成功，正在刷新…';
+    setTimeout(() => location.reload(), 600);
   } catch (e) {
     if (btn) { btn.disabled = false; btn.textContent = '检查更新'; }
     alert('更新失败：' + (e && e.message ? e.message : String(e)));
