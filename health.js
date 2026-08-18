@@ -65,12 +65,7 @@ var Health = (function() {
       html += '</div></div>';
     }
 
-    // Add buttons
-    html += '<div class="btn-row" style="margin-bottom:12px">' +
-      '<button class="btn primary" id="btn-add-body" style="flex:1">手动记录</button>' +
-      '<button class="btn" id="btn-ocr-body" style="flex:1">拍照识别</button></div>';
-
-    // History
+    // History or empty state
     if (records.length) {
       html += '<div class="card" style="padding:0;overflow:hidden">' +
         '<div style="padding:10px 14px;border-bottom:1px solid var(--line);font-weight:600;font-size:14px">历史记录</div>';
@@ -81,19 +76,15 @@ var Health = (function() {
           '<span class="muted small">›</span></div>';
       });
       html += '</div>';
-    } else {
-      html += '<div class="card muted center">还没有记录，点上方按钮添加</div>';
+    } else if (!records.length) {
+      html += '<div class="card muted center">还没有记录，点右下角 ＋ 添加</div>';
     }
     return html;
   }
 
-  function openBodyForm(record, prefill) {
-    var isEdit = !!record;
-    var r = record || prefill || {};
-    var html = '<h3>' + (isEdit ? '编辑体脂记录' : '记录体脂数据') + '</h3>' +
-      '<form id="body-form"><div class="form-row"><label>日期</label>' +
+  function buildBodyFormHtml(r, isEdit) {
+    var html = '<form id="body-form"><div class="form-row"><label>日期</label>' +
       '<input name="date" type="date" required value="' + (r.date || today()) + '"></div>';
-    // Core fields
     html += '<div class="form-two-col">';
     CORE_FIELDS.forEach(function(k) {
       var f = BODY_FIELDS.find(function(x) { return x.key === k; });
@@ -101,7 +92,6 @@ var Health = (function() {
         '<input name="' + k + '" type="number" step="0.1" value="' + (r[k] != null ? r[k] : '') + '"></div>';
     });
     html += '</div>';
-    // Optional fields (collapsed)
     html += '<details style="margin:8px 0"><summary style="font-size:13px;color:var(--accent);cursor:pointer">更多指标</summary>' +
       '<div class="form-two-col" style="margin-top:8px">';
     BODY_FIELDS.forEach(function(f) {
@@ -114,8 +104,11 @@ var Health = (function() {
       (isEdit ? '<button type="button" class="btn danger" id="bf-del">删除</button>' : '') +
       '<button type="button" class="btn" id="bf-cancel">取消</button>' +
       '<button type="submit" class="btn primary">保存</button></div></form>';
+    return html;
+  }
 
-    var root = window._openModal(html);
+  function bindBodyForm(root, record) {
+    var isEdit = !!record;
     root.querySelector('#bf-cancel').onclick = window._closeModal;
     if (isEdit) {
       root.querySelector('#bf-del').onclick = function() {
@@ -146,6 +139,14 @@ var Health = (function() {
       window._closeModal();
       render();
     };
+  }
+
+  function openBodyForm(record, prefill) {
+    var isEdit = !!record;
+    var r = record || prefill || {};
+    var html = '<h3>' + (isEdit ? '编辑体脂记录' : '记录体脂数据') + '</h3>' + buildBodyFormHtml(r, isEdit);
+    var root = window._openModal(html);
+    bindBodyForm(root, record);
   }
 
   function openBodyDetail(idx) {
@@ -245,7 +246,6 @@ var Health = (function() {
       });
     }
 
-    html += '<button class="btn primary block" id="btn-add-exer" style="margin-top:12px">记录运动</button>';
     return html;
   }
 
@@ -281,16 +281,14 @@ var Health = (function() {
     };
   }
 
-  // ===== OCR (qwen-vl) =====
+  // ===== Tabbed Body Modal (手动输入 / 拍照识别) =====
   var OCR_KEY_DEFAULT = 'sk-ws-H.EPRRRHI.HlbR.MEYCIQDrYAyIGWpKBXwWUf0Hi3BLICroawr8-HYbqM4ErV0odAIhAMsVp6Hr07NR1hswIIgUqPhViBiJFgAy2o0RmjayrYpg';
   var OCR_PROMPT = '请从这张体脂秤/体成分报告中提取以下数据，以JSON格式返回（只返回JSON，不要其他文字）。' +
     '字段：weight(体重kg), bodyFat(体脂率%), muscle(肌肉量kg), bmi(BMI), bmr(基础代谢kcal), visceralFat(内脏脂肪指数), ' +
     'water(体水分kg), protein(蛋白质kg), boneMass(骨量kg), fatMass(脂肪量kg), skeletalMuscle(骨骼肌kg), date(报告日期YYYY-MM-DD)。' +
     '如果某个字段在图中找不到，设为null。数字用number类型，不要用字符串。';
 
-  function startOcr() {
-    var key = (window._getAiKey && window._getAiKey()) || OCR_KEY_DEFAULT;
-    // Create hidden file input
+  function pickImage(cb) {
     var input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
@@ -298,37 +296,26 @@ var Health = (function() {
       var file = input.files[0];
       if (!file) return;
       var reader = new FileReader();
-      reader.onload = function() {
-        var base64 = reader.result;
-        callQwenVl(key, base64, function(err, data) {
-          if (err) { alert('识别失败：' + err); return; }
-          openBodyFormWithOcr(data);
-        });
-      };
+      reader.onload = function() { cb(reader.result); };
       reader.readAsDataURL(file);
     };
     input.click();
   }
 
   function callQwenVl(key, imageBase64, cb) {
-    // Show loading toast
     var toast = document.createElement('div');
     toast.textContent = '正在识别…';
     toast.style.cssText = 'position:fixed;bottom:calc(90px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);background:rgba(0,0,0,.78);color:#fff;padding:9px 18px;border-radius:20px;font-size:14px;z-index:300;';
     document.body.appendChild(toast);
-
     fetch('https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
       body: JSON.stringify({
         model: 'qwen-vl-max',
-        messages: [{
-          role: 'user',
-          content: [
-            { type: 'image_url', image_url: { url: imageBase64 } },
-            { type: 'text', text: OCR_PROMPT }
-          ]
-        }]
+        messages: [{ role: 'user', content: [
+          { type: 'image_url', image_url: { url: imageBase64 } },
+          { type: 'text', text: OCR_PROMPT }
+        ]}]
       })
     }).then(function(res) {
       if (!res.ok) return res.text().then(function(t) { throw new Error('API ' + res.status + ': ' + t); });
@@ -337,25 +324,77 @@ var Health = (function() {
       toast.remove();
       var text = json.choices && json.choices[0] && json.choices[0].message && json.choices[0].message.content;
       if (!text) throw new Error('返回内容为空');
-      // Extract JSON from response (may be wrapped in markdown code blocks)
       var match = text.match(/\{[\s\S]*\}/);
       if (!match) throw new Error('无法解析返回数据');
-      var data = JSON.parse(match[0]);
-      cb(null, data);
+      cb(null, JSON.parse(match[0]));
     }).catch(function(e) {
       toast.remove();
       cb(e.message || String(e));
     });
   }
 
-  function openBodyFormWithOcr(ocrData) {
-    var r = { date: ocrData.date || today() };
-    BODY_FIELDS.forEach(function(f) {
-      if (ocrData[f.key] != null && ocrData[f.key] !== '' && !isNaN(ocrData[f.key])) {
-        r[f.key] = Number(ocrData[f.key]);
-      }
+  function openBodyModal() {
+    var html = '<div class="modal-tabs">' +
+      '<button class="modal-tab active" data-mtab="form">手动输入</button>' +
+      '<button class="modal-tab" data-mtab="ocr">拍照识别</button></div>' +
+      '<div id="mtab-form">' + buildBodyFormHtml({}, false) + '</div>' +
+      '<div id="mtab-ocr" class="hidden">' +
+      '<div style="text-align:center;padding:24px 0">' +
+      '<div style="color:var(--muted);font-size:14px;margin-bottom:16px">上传体脂秤报告照片，自动识别数据</div>' +
+      '<button class="btn primary" id="btn-ocr-pick">选择图片</button></div></div>';
+    var root = window._openModal(html);
+
+    // Tab switching
+    root.querySelectorAll('.modal-tab').forEach(function(t) {
+      t.onclick = function() {
+        root.querySelectorAll('.modal-tab').forEach(function(x) { x.classList.remove('active'); });
+        t.classList.add('active');
+        var isForm = t.dataset.mtab === 'form';
+        root.querySelector('#mtab-form').classList.toggle('hidden', !isForm);
+        root.querySelector('#mtab-ocr').classList.toggle('hidden', isForm);
+      };
     });
-    openBodyForm(null, r);
+
+    // Bind form in the form tab
+    bindBodyForm(root, null);
+
+    // OCR pick button
+    root.querySelector('#btn-ocr-pick').onclick = function() {
+      var key = (window._getAiKey && window._getAiKey()) || OCR_KEY_DEFAULT;
+      pickImage(function(base64) {
+        callQwenVl(key, base64, function(err, data) {
+          if (err) { alert('识别失败：' + err); return; }
+          // Switch to form tab with prefilled data
+          var prefill = { date: data.date || today() };
+          BODY_FIELDS.forEach(function(f) {
+            if (data[f.key] != null && data[f.key] !== '' && !isNaN(data[f.key])) {
+              prefill[f.key] = Number(data[f.key]);
+            }
+          });
+          root.querySelector('#mtab-form').innerHTML = buildBodyFormHtml(prefill, false);
+          bindBodyForm(root, null);
+          // Switch tab visually
+          root.querySelectorAll('.modal-tab').forEach(function(x) { x.classList.remove('active'); });
+          root.querySelector('[data-mtab="form"]').classList.add('active');
+          root.querySelector('#mtab-form').classList.remove('hidden');
+          root.querySelector('#mtab-ocr').classList.add('hidden');
+        });
+      });
+    };
+  }
+
+  // ===== FAB =====
+  function updateHealthFab() {
+    var fab = document.getElementById('fab-health');
+    if (!fab) return;
+    var show = (tab === 'body' || tab === 'exercise') &&
+      !document.getElementById('view-health').classList.contains('hidden');
+    fab.classList.toggle('hidden', !show);
+  }
+
+  function onHealthFabClick() {
+    if (tab === 'body') openBodyModal();
+    else if (tab === 'exercise') openExerciseForm(today());
   }
 
   // ===== Public API =====
@@ -368,17 +407,11 @@ var Health = (function() {
     el.innerHTML = html;
 
     // Body events
-    var addBody = document.getElementById('btn-add-body');
-    if (addBody) addBody.onclick = function() { openBodyForm(null); };
-    var ocrBtn = document.getElementById('btn-ocr-body');
-    if (ocrBtn) ocrBtn.onclick = function() { startOcr(); };
     el.querySelectorAll('.health-rec').forEach(function(r) {
       r.onclick = function() { openBodyDetail(parseInt(r.dataset.idx, 10)); };
     });
 
     // Exercise events
-    var addExer = document.getElementById('btn-add-exer');
-    if (addExer) addExer.onclick = function() { openExerciseForm(today()); };
     var calPrev = document.getElementById('cal-prev');
     var calNext = document.getElementById('cal-next');
     if (calPrev) calPrev.onclick = function() {
@@ -396,6 +429,7 @@ var Health = (function() {
       bindCalEvents();
     };
     bindCalEvents();
+    updateHealthFab();
   }
 
   function bindCalEvents() {
@@ -440,7 +474,7 @@ var Health = (function() {
     });
   }
 
-  function switchTab(t) { tab = t; render(); }
+  function switchTab(t) { tab = t; render(); updateHealthFab(); }
 
   // Data access for backup/restore
   function exportData() {
@@ -454,5 +488,6 @@ var Health = (function() {
     } catch(e) {}
   }
 
-  return { render: render, switchTab: switchTab, exportData: exportData, importData: importData };
+  return { render: render, switchTab: switchTab, exportData: exportData, importData: importData,
+           updateFab: updateHealthFab, onFabClick: onHealthFabClick };
 })();

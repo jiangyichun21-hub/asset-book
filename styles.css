@@ -60,6 +60,21 @@ body.scroll-locked { overflow: hidden; touch-action: none; }
 .fab-trade.hidden { display: none; }
 .fab-trade.fab-scrolling { opacity: 0.4; transform: translateX(40px); }
 
+/* FAB for health module */
+.fab-health { position: fixed; bottom: calc(78px + env(safe-area-inset-bottom));
+  right: calc(50vw - 260px + 16px); width: 52px; height: 52px; border-radius: 50%;
+  border: 0; background: var(--accent); color: #fff; font-size: 28px; line-height: 52px;
+  box-shadow: 0 4px 12px rgba(79,110,247,.4); z-index: 8; cursor: pointer; padding: 0;
+  transition: opacity 0.3s ease, transform 0.3s ease; }
+@media (max-width: 540px) { .fab-health { right: 16px; } }
+.fab-health.hidden { display: none; }
+
+/* Modal tabs (body composition: 手动输入 / 拍照识别) */
+.modal-tabs { display: flex; border-bottom: 1px solid var(--line); margin: -4px -4px 12px; }
+.modal-tab { flex: 1; border: 0; background: none; padding: 10px 0; font-size: 14px;
+  color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; }
+.modal-tab.active { color: var(--accent); font-weight: 600; border-bottom-color: var(--accent); }
+
 /* Action sheet buttons (long-press menu) */
 .action-btn { display: block; width: 100%; text-align: left; padding: 14px 16px;
   border: 0; background: var(--bg); border-radius: 10px; font-size: 15px;

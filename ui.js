@@ -1,7 +1,7 @@
 /* global Core, Gist, Trades */
 'use strict';
 const LS_KEY = 'assetbook.v1';
-const BUILD_ID = '202608181830';
+const BUILD_ID = '202608181835';
 const $ = sel => document.querySelector(sel);
 
 let state = loadState();
@@ -208,6 +208,7 @@ function switchView(view) {
   $('#tabbar').classList.remove('hidden');
   renderTabbar();
   updateTradeFab();
+  Health.updateFab();
   // Update title
   var titles = { asset: '资产', trade: '买卖记账', health: '健康运动' };
   $('#title').textContent = titles[view] || view;
@@ -1185,6 +1186,7 @@ document.addEventListener('trade-edit', function(e) {
   if (e.detail && e.detail.rec) openTradeForm(e.detail.rec);
 });
 $('#fab-trade').onclick = () => openTradeForm(null);
+$('#fab-health').onclick = () => Health.onFabClick();
 
 // ---------- 云同步条 / 打开自动拉 / 下拉刷新 ----------
 function showSync(kind, msg, autoHide) {
