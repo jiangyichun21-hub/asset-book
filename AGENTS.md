@@ -162,3 +162,85 @@ body (max-width: 520px; margin: 0 auto)
 - 健康数据：`localStorage` 键 `assetbook.health.body` / `assetbook.health.exercise`（Health 模块独立管理）
 - 备份格式 v2：包含 accounts、snapshots、settings、trades、health、healthExer 字段
 - 云同步：Gist（通过 gist.js）
+
+## 模块功能详述
+
+### 资产管理（view-assets）
+
+- 账户列表，支持分组（银行/基金/其他）
+- 点账户卡片可编辑余额、查看详情、归档
+- 盘点模式：按顺序逐个更新余额
+- 顶部总资产/负债/净资产汇总
+- Tabbar：资产 | ＋ | 趋势
+
+### 趋势（view-trend）
+
+- SVG 折线图，支持 7天/30天/90天/全部 切换
+- 可下钻到单个账户
+
+### 买卖记账（view-trade）
+
+- 三个子 tab：交易流水 / 营销账单 / 数据分析
+- 交易流水：商品名、买家、订单号、买入价、卖出价、差价、利润、平台、发货/回款状态
+- 筛选栏可折叠：商品名/买家/订单号搜索、发货状态、回款状态、平台、日期范围
+- 营销账单：营销费用和大壮还款分开统计
+- 数据分析：Chart.js 折线图，支持 7/14/30/全部天 + 6 种指标切换
+- 左滑卡片：编辑 + 删除
+- FAB 弹出新增交易表单
+- Tabbar：记账 | ＋ | 分析（子 tab 控制）
+
+### 健康运动（view-health）
+
+- 两个子 tab：体脂记录 / 运动日历
+- **体脂记录**：
+  - 卡片列表，显示日期 + 核心指标（体重/体脂率/肌肉量/BMI/基础代谢/内脏脂肪）
+  - 左滑编辑/删除
+  - FAB 弹出带 TAB 的浮层：手动输入 | 拍照识别
+  - 拍照识别调用 qwen-vl-max OCR，上传体脂秤照片自动填表
+  - 可选指标折叠在 `<details>` 里（水分/蛋白质/无机盐/骨量/体年龄/皮下脂肪）
+- **运动日历**：
+  - 月历网格，运动日用 accent 色圆点标记
+  - 点击日期弹出运动记录表单（运动类型 + 时长 + 备注）
+  - 左右箭头切换月份
+  - 标题可点击弹年月选择器
+  - 日历内容刷新后事件必须重新绑定（`bindCalEvents()` + `refreshExercise()`）
+- Tabbar：体脂记录 | 运动日历
+- 数据存储：`assetbook.health.body`（数组）/ `assetbook.health.exercise`（数组）
+
+### 设置（view-settings）
+
+- 密码锁：设置/修改 4 位 PIN
+- AI 服务：API Key 输入（可显隐切换）+ 保存
+- 数据：手动备份到 Gist、手动导出 JSON、导入 JSON
+- Gist 配置：Token + Gist ID
+- 关于：版本号
+
+## 设计规范
+
+### 设计品质要求
+
+以专业交互设计师、UI 设计师、产品经理的角度思考和设计 C 端界面。不允许出现：
+
+- 控件对齐不一致（同类输入框宽度/边距必须统一）
+- 浮层高度跳动（TAB 切换时 min-height 统一）
+- 原生控件样式异常（date input 必须撑满、无右侧空白）
+- 状态不一致（切视图再回来 tabbar 高亮必须正确）
+- 事件丢失（内容刷新后按钮事件必须重绑）
+
+### 表单对齐规范
+
+- 所有 `input` / `select` 全局 `display: block; width: 100%`
+- `input[type="date"]` 额外加 `-webkit-appearance: none` 防止 WebKit 固有宽度限制
+- `.form-two-col` 内用 grid 两列等宽，`min-width: 0` 防溢出
+- 单独的 `.form-row`（如日期）必须和下方 `.form-two-col` 视觉上左右对齐
+- 复选框 `.form-check input` 和筛选栏 `.trade-filter-row` 内用 `display: inline-block` 覆盖
+
+### 空状态设计
+
+- 每个空列表必须有引导文案，如"点右下角 ＋ 添加记录"
+- 不要留白屏
+
+### 点击区域
+
+- 所有可点击元素最小 44px 高
+- 日历日期格子、tab 按钮、导航箭头都要保证足够大的触控区
