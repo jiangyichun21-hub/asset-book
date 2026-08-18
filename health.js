@@ -65,8 +65,15 @@ var Health = (function() {
       html += '</div></div>';
     }
 
-    // Add button
-    html += '<button class="btn primary block" id="btn-add-body">记录体脂数据</button>';
+    // Add buttons
+    html += '<div class="btn-row" style="margin-bottom:12px">' +
+      '<button class="btn primary" id="btn-add-body" style="flex:1">手动记录</button>' +
+      '<button class="btn" id="btn-ocr-body" style="flex:1">拍照识别</button></div>';
+
+    // OCR key hint
+    if (!localStorage.getItem('assetbook.ocr.key')) {
+      html += '<div class="card hint small" style="margin-bottom:12px">拍照识别需要配置百炼 API Key，<span id="btn-set-ocr-key" style="color:var(--accent);cursor:pointer;text-decoration:underline">点此配置</span></div>';
+    }
 
     // History
     if (records.length) {
@@ -85,9 +92,9 @@ var Health = (function() {
     return html;
   }
 
-  function openBodyForm(record) {
+  function openBodyForm(record, prefill) {
     var isEdit = !!record;
-    var r = record || {};
+    var r = record || prefill || {};
     var html = '<h3>' + (isEdit ? '编辑体脂记录' : '记录体脂数据') + '</h3>' +
       '<form id="body-form"><div class="form-row"><label>日期</label>' +
       '<input name="date" type="date" required value="' + (r.date || today()) + '"></div>';
@@ -279,6 +286,98 @@ var Health = (function() {
     };
   }
 
+  // ===== OCR (qwen-vl) =====
+  var OCR_KEY = 'assetbook.ocr.key';
+  var OCR_PROMPT = '请从这张体脂秤/体成分报告中提取以下数据，以JSON格式返回（只返回JSON，不要其他文字）。' +
+    '字段：weight(体重kg), bodyFat(体脂率%), muscle(肌肉量kg), bmi(BMI), bmr(基础代谢kcal), visceralFat(内脏脂肪指数), ' +
+    'water(体水分kg), protein(蛋白质kg), boneMass(骨量kg), fatMass(脂肪量kg), skeletalMuscle(骨骼肌kg), date(报告日期YYYY-MM-DD)。' +
+    '如果某个字段在图中找不到，设为null。数字用number类型，不要用字符串。';
+
+  function promptOcrKey() {
+    var cur = localStorage.getItem(OCR_KEY) || '';
+    var val = prompt('请输入百炼平台 API Key\n(bailian.console.aliyun.com 获取)', cur);
+    if (val !== null) {
+      val = val.trim();
+      if (val) localStorage.setItem(OCR_KEY, val);
+      else localStorage.removeItem(OCR_KEY);
+      render();
+    }
+  }
+
+  function startOcr() {
+    var key = localStorage.getItem(OCR_KEY);
+    if (!key) {
+      promptOcrKey();
+      return;
+    }
+    // Create hidden file input
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = function() {
+      var file = input.files[0];
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function() {
+        var base64 = reader.result;
+        callQwenVl(key, base64, function(err, data) {
+          if (err) { alert('识别失败：' + err); return; }
+          openBodyFormWithOcr(data);
+        });
+      };
+      reader.readAsDataURL(file);
+    };
+    input.click();
+  }
+
+  function callQwenVl(key, imageBase64, cb) {
+    // Show loading toast
+    var toast = document.createElement('div');
+    toast.textContent = '正在识别…';
+    toast.style.cssText = 'position:fixed;bottom:calc(90px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);background:rgba(0,0,0,.78);color:#fff;padding:9px 18px;border-radius:20px;font-size:14px;z-index:300;';
+    document.body.appendChild(toast);
+
+    fetch('https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
+      body: JSON.stringify({
+        model: 'qwen-vl-max',
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image_url', image_url: { url: imageBase64 } },
+            { type: 'text', text: OCR_PROMPT }
+          ]
+        }]
+      })
+    }).then(function(res) {
+      if (!res.ok) return res.text().then(function(t) { throw new Error('API ' + res.status + ': ' + t); });
+      return res.json();
+    }).then(function(json) {
+      toast.remove();
+      var text = json.choices && json.choices[0] && json.choices[0].message && json.choices[0].message.content;
+      if (!text) throw new Error('返回内容为空');
+      // Extract JSON from response (may be wrapped in markdown code blocks)
+      var match = text.match(/\{[\s\S]*\}/);
+      if (!match) throw new Error('无法解析返回数据');
+      var data = JSON.parse(match[0]);
+      cb(null, data);
+    }).catch(function(e) {
+      toast.remove();
+      cb(e.message || String(e));
+    });
+  }
+
+  function openBodyFormWithOcr(ocrData) {
+    var r = { date: ocrData.date || today() };
+    BODY_FIELDS.forEach(function(f) {
+      if (ocrData[f.key] != null && ocrData[f.key] !== '' && !isNaN(ocrData[f.key])) {
+        r[f.key] = Number(ocrData[f.key]);
+      }
+    });
+    openBodyForm(null, r);
+  }
+
   // ===== Public API =====
   function render() {
     var el = document.getElementById('view-health');
@@ -291,6 +390,10 @@ var Health = (function() {
     // Body events
     var addBody = document.getElementById('btn-add-body');
     if (addBody) addBody.onclick = function() { openBodyForm(null); };
+    var ocrBtn = document.getElementById('btn-ocr-body');
+    if (ocrBtn) ocrBtn.onclick = function() { startOcr(); };
+    var setKeyBtn = document.getElementById('btn-set-ocr-key');
+    if (setKeyBtn) setKeyBtn.onclick = function() { promptOcrKey(); };
     el.querySelectorAll('.health-rec').forEach(function(r) {
       r.onclick = function() { openBodyDetail(parseInt(r.dataset.idx, 10)); };
     });
