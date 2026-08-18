@@ -1,7 +1,7 @@
 /* global Core, Gist, Trades */
 'use strict';
 const LS_KEY = 'assetbook.v1';
-const BUILD_ID = '202608181845';
+const BUILD_ID = '202608181850';
 const $ = sel => document.querySelector(sel);
 
 let state = loadState();
@@ -139,6 +139,7 @@ window._getAiKey = () => state.settings.aiKey || '';
 
 // ---------- 视图切换 ----------
 let currentTradeTab = 'ledger'; // ledger | bills | analytics
+let currentHealthTab = 'body'; // body | exercise
 
 function renderTabbar() {
   const bar = $('#tabbar');
@@ -164,11 +165,13 @@ function renderTabbar() {
       };
     });
   } else if (currentView === 'health') {
+    var healthTab = currentHealthTab || 'body';
     bar.innerHTML =
-      '<button data-htab="body" class="tab active">体脂记录</button>' +
-      '<button data-htab="exercise" class="tab">运动日历</button>';
+      '<button data-htab="body" class="tab' + (healthTab === 'body' ? ' active' : '') + '">体脂记录</button>' +
+      '<button data-htab="exercise" class="tab' + (healthTab === 'exercise' ? ' active' : '') + '">运动日历</button>';
     bar.querySelectorAll('.tab').forEach(b => {
       b.onclick = () => {
+        currentHealthTab = b.dataset.htab;
         bar.querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x === b));
         Health.switchTab(b.dataset.htab);
       };

@@ -209,7 +209,7 @@ var Health = (function() {
     html += '<div class="card" style="padding:12px">' +
       '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">' +
       '<button class="icon-btn" id="cal-prev" style="font-size:18px">‹</button>' +
-      '<span style="font-weight:600;font-size:15px">' + calYear + '年 ' + mNames[calMonth] + '</span>' +
+      '<span id="cal-title" style="font-weight:600;font-size:15px;cursor:pointer">' + calYear + '年 ' + mNames[calMonth] + ' ▾</span>' +
       '<button class="icon-btn" id="cal-next" style="font-size:18px">›</button></div>';
 
     // Calendar grid
@@ -337,8 +337,8 @@ var Health = (function() {
     var html = '<div class="modal-tabs">' +
       '<button class="modal-tab active" data-mtab="form">手动输入</button>' +
       '<button class="modal-tab" data-mtab="ocr">拍照识别</button></div>' +
-      '<div id="mtab-form">' + buildBodyFormHtml({}, false) + '</div>' +
-      '<div id="mtab-ocr" class="hidden">' +
+      '<div id="mtab-form" style="min-height:320px">' + buildBodyFormHtml({}, false) + '</div>' +
+      '<div id="mtab-ocr" class="hidden" style="min-height:320px">' +
       '<div style="text-align:center;padding:24px 0">' +
       '<div style="color:var(--muted);font-size:14px;margin-bottom:16px">上传体脂秤报告照片，自动识别数据</div>' +
       '<button class="btn primary" id="btn-ocr-pick">选择图片</button></div></div>';
@@ -411,30 +411,79 @@ var Health = (function() {
       r.onclick = function() { openBodyDetail(parseInt(r.dataset.idx, 10)); };
     });
 
-    // Exercise events
-    var calPrev = document.getElementById('cal-prev');
-    var calNext = document.getElementById('cal-next');
-    if (calPrev) calPrev.onclick = function() {
-      calMonth--;
-      if (calMonth < 0) { calMonth = 11; calYear--; }
-      var exEl = document.getElementById('health-exercise');
-      if (exEl) exEl.innerHTML = renderExerciseTab();
-      bindCalEvents();
-    };
-    if (calNext) calNext.onclick = function() {
-      calMonth++;
-      if (calMonth > 11) { calMonth = 0; calYear++; }
-      var exEl = document.getElementById('health-exercise');
-      if (exEl) exEl.innerHTML = renderExerciseTab();
-      bindCalEvents();
-    };
     bindCalEvents();
     updateHealthFab();
+  }
+
+  function refreshExercise() {
+    var exEl = document.getElementById('health-exercise');
+    if (exEl) exEl.innerHTML = renderExerciseTab();
+    bindCalEvents();
   }
 
   function bindCalEvents() {
     var el = document.getElementById('view-health');
     if (!el) return;
+
+    // Nav arrows
+    var calPrev = document.getElementById('cal-prev');
+    var calNext = document.getElementById('cal-next');
+    if (calPrev) calPrev.onclick = function() {
+      calMonth--;
+      if (calMonth < 0) { calMonth = 11; calYear--; }
+      refreshExercise();
+    };
+    if (calNext) calNext.onclick = function() {
+      calMonth++;
+      if (calMonth > 11) { calMonth = 0; calYear++; }
+      refreshExercise();
+    };
+
+    // Year/month picker
+    var calTitle = document.getElementById('cal-title');
+    if (calTitle) calTitle.onclick = function() {
+      var mNames = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+      var html = '<h3>选择年月</h3><div style="margin:12px 0">';
+      // Year selector
+      html += '<div style="font-size:13px;color:var(--muted);margin-bottom:6px">年份</div><div class="pick" style="margin-bottom:12px">';
+      for (var y = calYear - 3; y <= calYear + 3; y++) {
+        html += '<div class="pk' + (y === calYear ? ' on' : '') + '" data-pick-year="' + y + '" style="width:auto;padding:0 12px;border-radius:8px;font-size:14px">' + y + '</div>';
+      }
+      html += '</div>';
+      // Month selector
+      html += '<div style="font-size:13px;color:var(--muted);margin-bottom:6px">月份</div><div class="pick">';
+      mNames.forEach(function(name, i) {
+        html += '<div class="pk' + (i === calMonth ? ' on' : '') + '" data-pick-month="' + i + '" style="width:auto;padding:4px 10px;border-radius:8px;font-size:13px">' + name + '</div>';
+      });
+      html += '</div></div>';
+      html += '<div class="btn-row"><button class="btn" id="ym-cancel">取消</button>' +
+        '<button class="btn primary" id="ym-ok">确定</button></div>';
+      var root = window._openModal(html);
+      var pickYear = calYear, pickMonth = calMonth;
+      root.querySelectorAll('[data-pick-year]').forEach(function(p) {
+        p.onclick = function() {
+          pickYear = parseInt(p.dataset.pickYear, 10);
+          root.querySelectorAll('[data-pick-year]').forEach(function(x) { x.classList.remove('on'); });
+          p.classList.add('on');
+        };
+      });
+      root.querySelectorAll('[data-pick-month]').forEach(function(p) {
+        p.onclick = function() {
+          pickMonth = parseInt(p.dataset.pickMonth, 10);
+          root.querySelectorAll('[data-pick-month]').forEach(function(x) { x.classList.remove('on'); });
+          p.classList.add('on');
+        };
+      });
+      root.querySelector('#ym-cancel').onclick = window._closeModal;
+      root.querySelector('#ym-ok').onclick = function() {
+        calYear = pickYear;
+        calMonth = pickMonth;
+        window._closeModal();
+        refreshExercise();
+      };
+    };
+
+    // Day cell clicks
     el.querySelectorAll('.cal-cell[data-date]').forEach(function(cell) {
       cell.onclick = function() {
         var ds = cell.dataset.date;
