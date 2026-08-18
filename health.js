@@ -70,11 +70,6 @@ var Health = (function() {
       '<button class="btn primary" id="btn-add-body" style="flex:1">手动记录</button>' +
       '<button class="btn" id="btn-ocr-body" style="flex:1">拍照识别</button></div>';
 
-    // OCR key hint
-    if (!localStorage.getItem('assetbook.ocr.key')) {
-      html += '<div class="card hint small" style="margin-bottom:12px">拍照识别需要配置百炼 API Key，<span id="btn-set-ocr-key" style="color:var(--accent);cursor:pointer;text-decoration:underline">点此配置</span></div>';
-    }
-
     // History
     if (records.length) {
       html += '<div class="card" style="padding:0;overflow:hidden">' +
@@ -288,6 +283,7 @@ var Health = (function() {
 
   // ===== OCR (qwen-vl) =====
   var OCR_KEY = 'assetbook.ocr.key';
+  var OCR_KEY_DEFAULT = 'sk-ws-H.EPRRRHI.HlbR.MEYCIQDrYAyIGWpKBXwWUf0Hi3BLICroawr8-HYbqM4ErV0odAIhAMsVp6Hr07NR1hswIIgUqPhViBiJFgAy2o0RmjayrYpg';
   var OCR_PROMPT = '请从这张体脂秤/体成分报告中提取以下数据，以JSON格式返回（只返回JSON，不要其他文字）。' +
     '字段：weight(体重kg), bodyFat(体脂率%), muscle(肌肉量kg), bmi(BMI), bmr(基础代谢kcal), visceralFat(内脏脂肪指数), ' +
     'water(体水分kg), protein(蛋白质kg), boneMass(骨量kg), fatMass(脂肪量kg), skeletalMuscle(骨骼肌kg), date(报告日期YYYY-MM-DD)。' +
@@ -305,11 +301,7 @@ var Health = (function() {
   }
 
   function startOcr() {
-    var key = localStorage.getItem(OCR_KEY);
-    if (!key) {
-      promptOcrKey();
-      return;
-    }
+    var key = localStorage.getItem(OCR_KEY) || OCR_KEY_DEFAULT;
     // Create hidden file input
     var input = document.createElement('input');
     input.type = 'file';
