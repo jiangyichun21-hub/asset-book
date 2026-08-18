@@ -201,7 +201,7 @@ input, select { width: 100%; padding: 11px 12px; margin: 8px 0; border: 1px soli
 
 /* Swipe-to-reveal (WeChat-style inline actions) */
 .trade-card-wrap { position: relative; overflow: hidden; border-radius: 12px; }
-.trade-card-row { display: flex; transition: transform 0.25s ease; }
+.trade-card-row { display: flex; width: 100%; transition: transform 0.25s ease; }
 .trade-card-wrap.swiped .trade-card-row { transform: translateX(-120px); }
 .trade-card-actions { display: flex; flex-shrink: 0; }
 .sw-btn { border: 0; color: #fff; font-size: 13px; font-weight: 500; width: 60px;
