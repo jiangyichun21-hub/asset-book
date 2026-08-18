@@ -199,15 +199,17 @@ input, select { width: 100%; padding: 11px 12px; margin: 8px 0; border: 1px soli
 
 .trade-list { display: flex; flex-direction: column; gap: 8px; }
 
-/* Swipe-to-reveal actions */
+/* Swipe-to-reveal (WeChat-style inline actions) */
 .trade-card-wrap { position: relative; overflow: hidden; border-radius: 12px; }
-.trade-card-actions { position: absolute; right: 0; top: 0; bottom: 0; display: flex; z-index: 1; }
-.sw-btn { border: 0; color: #fff; font-size: 13px; font-weight: 600; padding: 0 18px; cursor: pointer;
-  display: flex; align-items: center; justify-content: center; }
-.sw-edit { background: var(--accent); }
-.sw-delete { background: var(--danger); }
-.trade-card-wrap .trade-card { position: relative; z-index: 2; transition: transform 0.2s ease; margin-bottom: 0; }
-.trade-card-wrap.swiped .trade-card { transform: translateX(-120px); }
+.trade-card-row { display: flex; transition: transform 0.25s ease; }
+.trade-card-wrap.swiped .trade-card-row { transform: translateX(-120px); }
+.trade-card-actions { display: flex; flex-shrink: 0; }
+.sw-btn { border: 0; color: #fff; font-size: 13px; font-weight: 500; width: 60px;
+  display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.sw-edit { background: #94a3b8; }
+.sw-delete { background: #c4928f; }
+.trade-card-row > .trade-card { flex: 1; min-width: 0; border-radius: 12px 0 0 12px; margin-bottom: 0; }
+.trade-card-wrap.swiped .trade-card { border-radius: 12px 0 0 12px; }
 .trade-card { background: var(--card); border-radius: 12px; border: 1px solid var(--line);
   padding: 12px 14px; cursor: pointer; transition: box-shadow 0.15s; }
 .trade-card:active { box-shadow: 0 0 0 2px #e5e7fd; }
