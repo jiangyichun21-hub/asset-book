@@ -70,12 +70,14 @@ body (max-width: 520px; margin: 0 auto)
     <section #view-trend>
     <section #view-trade>
     <section #view-health>
+    <section #view-notes>
     <section #view-settings>
   </main>
   <nav #tabbar>             ← fixed bottom, 按 currentView 重渲染
   <div #modal-root>         ← 空容器，modal 动态注入
   <button #fab-trade>       ← fixed, 独立浮动
   <button #fab-health>      ← fixed, 独立浮动
+  <button #fab-notes>       ← fixed, 独立浮动
 ```
 
 ## 组件规范

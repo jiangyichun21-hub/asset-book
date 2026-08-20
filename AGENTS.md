@@ -26,6 +26,7 @@ gist.js         — Gist 云同步
 ui.js           — 主 UI 渲染、路由、设置、备份恢复
 trades.js       — 买卖记账模块
 health.js       — 健康运动模块（体脂记录 + 运动日历）
+notes.js        — 小记模块（笔记增删改查 + 搜索 + 标签 + 富文本）
 sw.js           — Service Worker 缓存策略
 ```
 
@@ -109,6 +110,18 @@ FAB(8) < Tabbar(10) < dd-overlay(150) < Topbar(200) < Modal(250) < Toast(300)
   - 日历内容刷新后事件必须重新绑定（`bindCalEvents()` + `refreshExercise()`）
 - Tabbar：体脂记录 | 运动日历
 - 数据存储：`assetbook.health.body`（数组）/ `assetbook.health.exercise`（数组）
+
+### 小记（view-notes）
+
+- 顶部搜索栏：输入关键词实时过滤标题+正文
+- 标签筛选：横向滚动 chips，「全部」+ 各标签，点击筛选
+- 笔记卡片列表：标题 + 正文预览（2行截断）+ 标签色点 + 更新时间
+- 左滑卡片：编辑（#94a3b8）+ 删除（#c4928f），阈值 30px，吸附 -120px
+- 按 updatedAt 降序排列
+- FAB 弹出新建/编辑浮层：标题输入 + 标签选择（已有标签 chips + 新建标签）+ 富文本编辑器
+- 富文本：contenteditable + document.execCommand，支持加粗/列表/编号/标题
+- 数据存储：`localStorage` 键 `assetbook.notes`（数组）/ `assetbook.noteTags`（字符串数组）
+- Tabbar：只显示「小记」单 tab
 
 ### 设置（view-settings）
 

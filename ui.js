@@ -1,7 +1,7 @@
 /* global Core, Gist, Trades */
 'use strict';
 const LS_KEY = 'assetbook.v1';
-const BUILD_ID = '202608181856';
+const BUILD_ID = '202608201838';
 const $ = sel => document.querySelector(sel);
 
 let state = loadState();
@@ -176,6 +176,8 @@ function renderTabbar() {
         Health.switchTab(b.dataset.htab);
       };
     });
+  } else if (currentView === 'notes') {
+    bar.innerHTML = '<button class="tab active">小记</button>';
   }
 }
 
@@ -195,6 +197,7 @@ function switchView(view) {
   $('#view-trend').classList.add('hidden');
   $('#view-trade').classList.add('hidden');
   $('#view-health').classList.add('hidden');
+  $('#view-notes').classList.add('hidden');
   $('#view-settings').classList.add('hidden');
   // Show correct view
   if (view === 'asset') {
@@ -207,13 +210,17 @@ function switchView(view) {
   } else if (view === 'health') {
     $('#view-health').classList.remove('hidden');
     Health.render();
+  } else if (view === 'notes') {
+    $('#view-notes').classList.remove('hidden');
+    Notes.render();
   }
   $('#tabbar').classList.remove('hidden');
   renderTabbar();
   updateTradeFab();
   Health.updateFab();
+  Notes.updateFab();
   // Update title
-  var titles = { asset: '资产', trade: '买卖记账', health: '健康运动' };
+  var titles = { asset: '资产', trade: '买卖记账', health: '健康运动', notes: '小记' };
   $('#title').textContent = titles[view] || view;
   // Update dropdown active state
   document.querySelectorAll('.dd-item').forEach(function(d) {
@@ -224,7 +231,7 @@ function switchView(view) {
 function renderAll() {
   syncTopbar();
   if (!$('#view-settings').classList.contains('hidden')) { renderSettings(); renderBadge(); return; }
-  if (currentView === 'trade' || currentView === 'health') return; // self-rendering views
+  if (currentView === 'trade' || currentView === 'health' || currentView === 'notes') return; // self-rendering views
   if (currentTab === 'assets') renderAssets(); else renderTrend();
   renderBadge();
 }
@@ -1190,6 +1197,7 @@ document.addEventListener('trade-edit', function(e) {
 });
 $('#fab-trade').onclick = () => openTradeForm(null);
 $('#fab-health').onclick = () => Health.onFabClick();
+$('#fab-notes').onclick = () => Notes.onFabClick();
 
 // ---------- 云同步条 / 打开自动拉 / 下拉刷新 ----------
 function showSync(kind, msg, autoHide) {
