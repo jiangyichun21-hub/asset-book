@@ -21,7 +21,7 @@ body { max-width: 520px; margin: 0 auto; padding-bottom: calc(72px + env(safe-ar
 .topbar-right { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
 
 /* Body scroll lock when overlay/sheet/dropdown is open (iOS-safe: JS toggles inline styles) */
-body.scroll-locked { overflow: hidden; touch-action: none; }
+body.scroll-locked { overflow: hidden; touch-action: none; overscroll-behavior: none; }
 .overlay { overscroll-behavior: contain; }
 
 /* Token input with inline eye toggle */

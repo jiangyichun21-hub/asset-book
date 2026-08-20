@@ -1,7 +1,7 @@
 /* global Core, Gist, Trades */
 'use strict';
 const LS_KEY = 'assetbook.v1';
-const BUILD_ID = '202608201844';
+const BUILD_ID = '202608201847';
 const $ = sel => document.querySelector(sel);
 
 let state = loadState();
@@ -115,9 +115,14 @@ function unlockScroll() {
 function openModal(html) {
   const root = $('#modal-root');
   root.innerHTML = '<div class="overlay"><div class="sheet">' + html + '</div></div>';
-  root.querySelector('.overlay').addEventListener('click', e => {
+  var overlay = root.querySelector('.overlay');
+  overlay.addEventListener('click', e => {
     if (e.target.classList.contains('overlay')) closeModal();
   });
+  // Block background scroll on iOS PWA
+  overlay.addEventListener('touchmove', function(e) {
+    if (!e.target.closest('.sheet')) e.preventDefault();
+  }, { passive: false });
   lockScroll();
   history.pushState({ ab: 'modal' }, '');
   return root;
