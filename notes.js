@@ -321,6 +321,17 @@ var Notes = (function() {
       };
     });
 
+    // iOS keyboard: scroll editor into view when focused
+    var editor = root.querySelector('#note-editor');
+    if (editor) {
+      editor.addEventListener('focus', function() {
+        var self = this;
+        setTimeout(function() {
+          self.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        }, 350);
+      });
+    }
+
     // Cancel
     root.querySelector('#note-cancel').onclick = function() { window._closeModal(); };
 
