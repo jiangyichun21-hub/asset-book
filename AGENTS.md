@@ -25,7 +25,7 @@ core.js         — 数据模型、状态管理、导入导出逻辑
 gist.js         — Gist 云同步
 ui.js           — 主 UI 渲染、路由、设置、备份恢复
 trades.js       — 买卖记账模块
-health.js       — 健康运动模块（体脂记录 + 运动日历）
+health.js       — 健康运动模块（体脂记录 + 运动日历 + 姨妈日历）
 notes.js        — 小记模块（笔记增删改查 + 搜索 + 标签 + 富文本）
 sw.js           — Service Worker 缓存策略
 ```
@@ -63,8 +63,8 @@ FAB(8) < Tabbar(10) < dd-overlay(150) < Topbar(200) < Modal(250) < Toast(300)
 ## 数据存储
 
 - 主数据：`localStorage` 键 `assetbook.v1`（Core 管理）
-- 健康数据：`localStorage` 键 `assetbook.health.body` / `assetbook.health.exercise`（Health 模块独立管理）
-- 备份格式 v2：包含 accounts、snapshots、settings、trades、health、healthExer 字段
+- 健康数据：`localStorage` 键 `assetbook.health.body` / `assetbook.health.exercise` / `assetbook.health.periods`（Health 模块独立管理）
+- 备份格式 v2：包含 accounts、snapshots、settings、trades、health、healthExer、healthPeriod 字段
 - 云同步：Gist（通过 gist.js）
 
 ## 模块功能详述
@@ -95,7 +95,7 @@ FAB(8) < Tabbar(10) < dd-overlay(150) < Topbar(200) < Modal(250) < Toast(300)
 
 ### 健康运动（view-health）
 
-- 两个子 tab：体脂记录 / 运动日历
+- 三个子 tab：体脂记录 / 运动日历 / 姨妈日历
 - **体脂记录**：
   - 卡片列表，显示日期 + 核心指标（体重/体脂率/肌肉量/BMI/基础代谢/内脏脂肪）
   - 左滑编辑/删除
@@ -108,8 +108,17 @@ FAB(8) < Tabbar(10) < dd-overlay(150) < Topbar(200) < Modal(250) < Toast(300)
   - 左右箭头切换月份
   - 标题可点击弹年月选择器
   - 日历内容刷新后事件必须重新绑定（`bindCalEvents()` + `refreshExercise()`）
-- Tabbar：体脂记录 | 运动日历
-- 数据存储：`assetbook.health.body`（数组）/ `assetbook.health.exercise`（数组）
+- **姨妈日历**：
+  - 顶部概览卡片：当前周期天数 / 经期中状态 + 预计下次经期 + 周期/经期天数
+  - 月历网格：经期日(#fecdd3)、预测经期(#fff1f2)、易孕期(#ecfccb)、排卵日(绿色圆点)
+  - 点击日期：已有经期记录→显示编辑/删除；无记录→快速录入开始+结束日期
+  - 历史记录列表（最近12条），点击进入编辑
+  - 设置入口：周期天数(默认28) + 经期天数(默认5)，自动根据历史计算平均周期
+  - 预测算法：基于历史经期开始日间隔平均值，向前推算下次经期和排卵日
+  - 无 FAB（通过点击日历格子记录）
+  - 日历内容刷新后事件必须重新绑定（`bindPeriodEvents()` + `refreshPeriod()`）
+- Tabbar：体脂记录 | 运动日历 | 姨妈日历
+- 数据存储：`assetbook.health.body`（数组）/ `assetbook.health.exercise`（数组）/ `assetbook.health.periods`（对象：{ records, cycleLength, periodLength }）
 
 ### 小记（view-notes）
 

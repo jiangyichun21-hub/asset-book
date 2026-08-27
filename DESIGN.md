@@ -138,6 +138,8 @@ body (max-width: 520px; margin: 0 auto)
 - `.cal-grid`：`repeat(7, 1fr); gap: 2px`
 - 今日：#e5e7fd 背景；有运动：#e6f7ef 背景；两者叠加：#d4edda
 - 运动日底部小圆点（accent 色，absolute 定位）
+- 姨妈日历：经期日 #fecdd3、预测经期 #fff1f2、易孕期 #ecfccb、排卵日右上角绿色圆点(#84cc16)
+- 今日 + 经期叠加：经期背景色 + 2px accent 边框
 
 ## 设计品质红线
 
