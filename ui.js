@@ -1,7 +1,7 @@
 /* global Core, Gist, Trades */
 'use strict';
 const LS_KEY = 'assetbook.v1';
-const BUILD_ID = '202608201851';
+const BUILD_ID = '202608271150';
 const $ = sel => document.querySelector(sel);
 
 let state = loadState();
@@ -173,7 +173,8 @@ function renderTabbar() {
     var healthTab = currentHealthTab || 'body';
     bar.innerHTML =
       '<button data-htab="body" class="tab' + (healthTab === 'body' ? ' active' : '') + '">体脂记录</button>' +
-      '<button data-htab="exercise" class="tab' + (healthTab === 'exercise' ? ' active' : '') + '">运动日历</button>';
+      '<button data-htab="exercise" class="tab' + (healthTab === 'exercise' ? ' active' : '') + '">运动日历</button>' +
+      '<button data-htab="period" class="tab' + (healthTab === 'period' ? ' active' : '') + '">姨妈日历</button>';
     bar.querySelectorAll('.tab').forEach(b => {
       b.onclick = () => {
         currentHealthTab = b.dataset.htab;
@@ -693,7 +694,8 @@ async function doBackup(isManual) {
       assets: Core.exportData(state),
       trades: localStorage.getItem('assetbook.trades') || '{}',
       health: localStorage.getItem('assetbook.health.body') || '[]',
-      healthExer: localStorage.getItem('assetbook.health.exercise') || '[]'
+      healthExer: localStorage.getItem('assetbook.health.exercise') || '[]',
+      healthPeriod: localStorage.getItem('assetbook.health.periods') || '{}'
     });
     if (s.passphrase) content = await Core.encryptText(content, s.passphrase);
     const id = await Gist.pushBackup({ token: s.gistToken, gistId: s.gistId, content });
@@ -712,18 +714,18 @@ async function parseBackupContent(content, pass) {
   let raw;
   try { raw = JSON.parse(content); } catch (_) { raw = null; }
   if (raw && raw.v === 2 && raw.assets) {
-    return { data: Core.importData(raw.assets), trades: raw.trades || null, health: raw.health || null, healthExer: raw.healthExer || null };
+    return { data: Core.importData(raw.assets), trades: raw.trades || null, health: raw.health || null, healthExer: raw.healthExer || null, healthPeriod: raw.healthPeriod || null };
   }
   try {
-    return { data: Core.importData(content), trades: null, health: null, healthExer: null };
+    return { data: Core.importData(content), trades: null, health: null, healthExer: null, healthPeriod: null };
   } catch (_) {
     if (!pass) throw new Error('数据已加密，需要口令');
     const dec = await Core.decryptText(content, pass);
     let raw2; try { raw2 = JSON.parse(dec); } catch (_) { raw2 = null; }
     if (raw2 && raw2.v === 2 && raw2.assets) {
-      return { data: Core.importData(raw2.assets), trades: raw2.trades || null, health: raw2.health || null, healthExer: raw2.healthExer || null };
+      return { data: Core.importData(raw2.assets), trades: raw2.trades || null, health: raw2.health || null, healthExer: raw2.healthExer || null, healthPeriod: raw2.healthPeriod || null };
     }
-    return { data: Core.importData(dec), trades: null, health: null, healthExer: null };
+    return { data: Core.importData(dec), trades: null, health: null, healthExer: null, healthPeriod: null };
   }
 }
 async function restoreFromGist() {
@@ -780,6 +782,7 @@ async function restoreFromGist() {
     if (parsed.trades) localStorage.setItem('assetbook.trades', parsed.trades);
     if (parsed.health) localStorage.setItem('assetbook.health.body', parsed.health);
     if (parsed.healthExer) localStorage.setItem('assetbook.health.exercise', parsed.healthExer);
+    if (parsed.healthPeriod) localStorage.setItem('assetbook.health.periods', parsed.healthPeriod);
     saveState();
     alert('恢复成功：' + parsed.data.accounts.length + ' 个账户，' +
       parsed.data.snapshots.length + ' 条快照');
@@ -1233,6 +1236,7 @@ async function pullFromGist(silent) {
     // Write health data if present
     if (parsed.health) localStorage.setItem('assetbook.health.body', parsed.health);
     if (parsed.healthExer) localStorage.setItem('assetbook.health.exercise', parsed.healthExer);
+    if (parsed.healthPeriod) localStorage.setItem('assetbook.health.periods', parsed.healthPeriod);
     renderAll();
     showSync('ok', '已同步 · ' + new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }), true);
     return true;

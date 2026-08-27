@@ -309,6 +309,28 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
   width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
 .health-rec:active { background: #f5f6f8; }
 
+/* ===== Period Calendar ===== */
+.cal-cell.period-day { background: #fecdd3; }
+.cal-cell.period-day.today { background: #fecdd3; border: 2px solid var(--accent); }
+.cal-cell.period-predicted { background: #fff1f2; }
+.cal-cell.period-predicted.today { background: #fff1f2; border: 2px solid var(--accent); }
+.cal-cell.period-fertile { background: #ecfccb; }
+.cal-cell.period-fertile.today { background: #ecfccb; border: 2px solid var(--accent); }
+.cal-cell.period-ovulation::after { content: ''; position: absolute; top: 3px; right: 3px;
+  width: 6px; height: 6px; border-radius: 50%; background: #84cc16; }
+.period-legend { display: flex; flex-wrap: wrap; gap: 10px; font-size: 12px; color: var(--muted);
+  margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+.period-legend-dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px;
+  vertical-align: middle; margin-right: 4px; }
+.period-overview { background: var(--card); border-radius: 14px; padding: 16px; margin-bottom: 12px; text-align: center; }
+.period-overview .po-label { font-size: 12px; color: var(--muted); margin-bottom: 2px; }
+.period-overview .po-value { font-size: 20px; font-weight: 700; color: var(--text); }
+.period-overview .po-sub { font-size: 13px; color: var(--muted); margin-top: 4px; }
+.period-history-item { padding: 10px 14px; border-bottom: 1px solid var(--line); display: flex;
+  align-items: center; justify-content: space-between; cursor: pointer; }
+.period-history-item:last-child { border-bottom: none; }
+.period-history-item:active { background: var(--bg); }
+
 /* ===== Notes Module ===== */
 /* FAB */
 .fab-notes { position: fixed; bottom: calc(78px + env(safe-area-inset-bottom));

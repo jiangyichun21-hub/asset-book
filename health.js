@@ -383,6 +383,370 @@ var Health = (function() {
     };
   }
 
+  // ===== Period Calendar =====
+  var PER_KEY = 'assetbook.health.periods';
+  var pCalYear, pCalMonth;
+
+  function loadPeriodData() {
+    try { return JSON.parse(localStorage.getItem(PER_KEY)) || { records: [], cycleLength: 28, periodLength: 5 }; }
+    catch(e) { return { records: [], cycleLength: 28, periodLength: 5 }; }
+  }
+  function savePeriodData(d) { localStorage.setItem(PER_KEY, JSON.stringify(d)); }
+
+  function getAvgCycleLength(records) {
+    if (records.length < 2) return null;
+    var sorted = records.slice().sort(function(a, b) { return a.start.localeCompare(b.start); });
+    var total = 0, count = 0;
+    for (var i = 1; i < sorted.length; i++) {
+      var diff = Math.round((new Date(sorted[i].start) - new Date(sorted[i - 1].start)) / 86400000);
+      if (diff > 15 && diff < 60) { total += diff; count++; }
+    }
+    return count > 0 ? Math.round(total / count) : null;
+  }
+
+  function getPeriodDaySet(records) {
+    var s = {};
+    records.forEach(function(r) {
+      if (!r.start) return;
+      var end = r.end || r.start;
+      var d = new Date(r.start + 'T00:00:00');
+      var e = new Date(end + 'T00:00:00');
+      for (var t = new Date(d); t <= e; t.setDate(t.getDate() + 1)) {
+        s[t.toISOString().substring(0, 10)] = true;
+      }
+    });
+    return s;
+  }
+
+  function predictPeriodInfo(records, cycleLen) {
+    if (!records.length) return { nextStart: null, fertileDays: {}, ovulationDay: null };
+    var sorted = records.slice().sort(function(a, b) { return b.start.localeCompare(a.start); });
+    var lastStart = new Date(sorted[0].start + 'T00:00:00');
+    var avg = getAvgCycleLength(records) || cycleLen;
+    var nextStart = new Date(lastStart);
+    nextStart.setDate(nextStart.getDate() + avg);
+    var todayDate = new Date(); todayDate.setHours(0, 0, 0, 0);
+    while (nextStart <= todayDate) nextStart.setDate(nextStart.getDate() + avg);
+    var nextStr = nextStart.toISOString().substring(0, 10);
+    var ovDate = new Date(nextStart); ovDate.setDate(ovDate.getDate() - 14);
+    var ovStr = ovDate.toISOString().substring(0, 10);
+    var fertileDays = {};
+    for (var i = -5; i <= 1; i++) {
+      var fd = new Date(ovDate); fd.setDate(fd.getDate() + i);
+      fertileDays[fd.toISOString().substring(0, 10)] = true;
+    }
+    return { nextStart: nextStr, fertileDays: fertileDays, ovulationDay: ovStr };
+  }
+
+  function renderPeriodTab() {
+    if (pCalYear == null) { var now = new Date(); pCalYear = now.getFullYear(); pCalMonth = now.getMonth(); }
+    var data = loadPeriodData();
+    var records = data.records;
+    var cycleLen = data.cycleLength || 28;
+    var periodLen = data.periodLength || 5;
+    var periodDays = getPeriodDaySet(records);
+    var pred = predictPeriodInfo(records, cycleLen);
+    var todayStr = today();
+    var html = '';
+
+    // Overview card
+    var sorted = records.slice().sort(function(a, b) { return b.start.localeCompare(a.start); });
+    if (sorted.length > 0) {
+      var lastStart = new Date(sorted[0].start + 'T00:00:00');
+      var todayDate = new Date(todayStr + 'T00:00:00');
+      var cycleDay = Math.round((todayDate - lastStart) / 86400000) + 1;
+      var isOnPeriod = !!periodDays[todayStr];
+      var statusText = isOnPeriod ? '经期中' : '第 ' + cycleDay + ' 天';
+      var nextText = pred.nextStart ? '预计 ' + pred.nextStart.substring(5).replace('-', '/') + ' 来' : '记录更多数据以预测';
+      html += '<div class="period-overview">' +
+        '<div class="po-label">当前状态</div>' +
+        '<div class="po-value">' + statusText + '</div>' +
+        '<div class="po-sub">' + nextText + ' · 周期 ' + cycleLen + ' 天 · 经期 ' + periodLen + ' 天</div></div>';
+    } else {
+      html += '<div class="period-overview">' +
+        '<div class="po-label">还没有记录</div>' +
+        '<div class="po-sub">点击下方日历上的日期，记录经期开始日</div></div>';
+    }
+
+    // Calendar
+    var mNames = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+    html += '<div class="card" style="padding:12px">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">' +
+      '<button class="icon-btn" id="pc-prev" style="font-size:18px">‹</button>' +
+      '<span id="pc-title" style="font-weight:600;font-size:15px;cursor:pointer">' + pCalYear + '年 ' + mNames[pCalMonth] + ' ▾</span>' +
+      '<button class="icon-btn" id="pc-next" style="font-size:18px">›</button></div>';
+
+    html += '<div class="cal-grid">';
+    ['日','一','二','三','四','五','六'].forEach(function(d) { html += '<div class="cal-head">' + d + '</div>'; });
+    var firstDay = new Date(pCalYear, pCalMonth, 1).getDay();
+    var daysInMonth = new Date(pCalYear, pCalMonth + 1, 0).getDate();
+    for (var i = 0; i < firstDay; i++) html += '<div class="cal-cell empty"></div>';
+
+    // Predicted period days for this month
+    var predDays = {};
+    if (pred.nextStart) {
+      var ps = new Date(pred.nextStart + 'T00:00:00');
+      for (var pi = 0; pi < periodLen; pi++) {
+        var pd = new Date(ps); pd.setDate(pd.getDate() + pi);
+        predDays[pd.toISOString().substring(0, 10)] = true;
+      }
+    }
+
+    for (var d = 1; d <= daysInMonth; d++) {
+      var ds = pCalYear + '-' + String(pCalMonth + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+      var isToday = ds === todayStr;
+      var isPeriod = !!periodDays[ds];
+      var isPred = !isPeriod && !!predDays[ds];
+      var isFertile = !isPeriod && !isPred && !!pred.fertileDays[ds];
+      var isOv = ds === pred.ovulationDay && !isPeriod;
+      var cls = 'cal-cell';
+      if (isPeriod) cls += ' period-day';
+      else if (isPred) cls += ' period-predicted';
+      else if (isFertile) cls += ' period-fertile';
+      if (isOv) cls += ' period-ovulation';
+      if (isToday) cls += ' today';
+      html += '<div class="' + cls + '" data-date="' + ds + '"><span class="cal-day">' + d + '</span></div>';
+    }
+    html += '</div>';
+
+    // Legend
+    html += '<div class="period-legend">' +
+      '<span><span class="period-legend-dot" style="background:#fecdd3"></span>经期</span>' +
+      '<span><span class="period-legend-dot" style="background:#fff1f2"></span>预测</span>' +
+      '<span><span class="period-legend-dot" style="background:#ecfccb"></span>易孕期</span>' +
+      '</div></div>';
+
+    // History
+    if (sorted.length > 0) {
+      html += '<div class="card" style="padding:0;overflow:hidden">' +
+        '<div style="padding:10px 14px;border-bottom:1px solid var(--line);font-weight:600;font-size:14px">' +
+        '经期记录 <button id="pc-settings" style="float:right;border:0;background:none;color:var(--accent);font-size:13px;cursor:pointer">设置</button></div>';
+      sorted.slice(0, 12).forEach(function(r, i) {
+        var endDate = r.end || r.start;
+        var dur = Math.round((new Date(endDate) - new Date(r.start)) / 86400000) + 1;
+        html += '<div class="period-history-item" data-pidx="' + i + '">' +
+          '<div><b>' + r.start + '</b> <span class="muted small">~ ' + endDate + ' (' + dur + '天)</span></div>' +
+          '<span class="muted small">›</span></div>';
+      });
+      html += '</div>';
+    }
+
+    return html;
+  }
+
+  function openPeriodDaySheet(dateStr) {
+    var data = loadPeriodData();
+    var records = data.records;
+    var periodDays = getPeriodDaySet(records);
+    var isPeriod = !!periodDays[dateStr];
+    var cycleLen = data.cycleLength || 28;
+    var periodLen = data.periodLength || 5;
+
+    if (isPeriod) {
+      // Find which record(s) contain this date
+      var matching = [];
+      records.forEach(function(r, idx) {
+        if (!r.start) return;
+        var end = r.end || r.start;
+        if (dateStr >= r.start && dateStr <= end) matching.push({ record: r, idx: idx });
+      });
+      var html = '<h3>' + dateStr + '</h3><div style="margin:8px 0">';
+      matching.forEach(function(m) {
+        var r = m.record;
+        html += '<div class="card" style="margin-bottom:8px;padding:10px">' +
+          '<div>经期：' + r.start + ' ~ ' + (r.end || r.start) + '</div>' +
+          '<div class="btn-row" style="margin-top:6px">' +
+          '<button class="btn small" data-act="edit" data-ridx="' + m.idx + '">编辑</button>' +
+          '<button class="btn small danger" data-act="del" data-ridx="' + m.idx + '">删除</button></div></div>';
+      });
+      html += '</div><div class="btn-row"><button class="btn" id="pds-close">关闭</button></div>';
+      var root = window._openModal(html);
+      root.querySelector('#pds-close').onclick = window._closeModal;
+      root.querySelectorAll('[data-act="del"]').forEach(function(btn) {
+        btn.onclick = function() {
+          if (!confirm('删除这条经期记录？')) return;
+          var idx = parseInt(btn.dataset.ridx, 10);
+          data.records.splice(idx, 1);
+          savePeriodData(data);
+          window._closeModal();
+          refreshPeriod();
+        };
+      });
+      root.querySelectorAll('[data-act="edit"]').forEach(function(btn) {
+        btn.onclick = function() {
+          var idx = parseInt(btn.dataset.ridx, 10);
+          window._closeModal();
+          setTimeout(function() { openPeriodEditForm(data.records[idx], idx); }, 100);
+        };
+      });
+    } else {
+      // Quick add: mark as period start
+      var defaultEnd = new Date(dateStr + 'T00:00:00');
+      defaultEnd.setDate(defaultEnd.getDate() + periodLen - 1);
+      var defaultEndStr = defaultEnd.toISOString().substring(0, 10);
+      var html = '<h3>记录经期</h3>' +
+        '<form id="period-quick-form">' +
+        '<div class="form-two-col">' +
+        '<div class="form-row"><label>开始日期</label>' +
+        '<input name="start" type="date" required value="' + dateStr + '"></div>' +
+        '<div class="form-row"><label>结束日期</label>' +
+        '<input name="end" type="date" value="' + defaultEndStr + '"></div>' +
+        '</div>' +
+        '<div class="btn-row"><button type="button" class="btn" id="pqf-cancel">取消</button>' +
+        '<button type="submit" class="btn primary">保存</button></div></form>';
+      var root = window._openModal(html);
+      root.querySelector('#pqf-cancel').onclick = window._closeModal;
+      root.querySelector('#period-quick-form').onsubmit = function(e) {
+        e.preventDefault();
+        var f = e.target;
+        var start = f.start.value;
+        var end = f.end.value || start;
+        if (start > end) { alert('结束日期不能早于开始日期'); return; }
+        data.records.push({ start: start, end: end });
+        savePeriodData(data);
+        window._closeModal();
+        refreshPeriod();
+      };
+    }
+  }
+
+  function openPeriodEditForm(record, idx) {
+    var r = record || {};
+    var html = '<h3>编辑经期记录</h3>' +
+      '<form id="period-edit-form">' +
+      '<div class="form-two-col">' +
+      '<div class="form-row"><label>开始日期</label>' +
+      '<input name="start" type="date" required value="' + (r.start || today()) + '"></div>' +
+      '<div class="form-row"><label>结束日期</label>' +
+      '<input name="end" type="date" value="' + (r.end || r.start || today()) + '"></div>' +
+      '</div>' +
+      '<div class="btn-row">' +
+      '<button type="button" class="btn danger" id="pef-del">删除</button>' +
+      '<button type="button" class="btn" id="pef-cancel">取消</button>' +
+      '<button type="submit" class="btn primary">保存</button></div></form>';
+    var root = window._openModal(html);
+    root.querySelector('#pef-cancel').onclick = window._closeModal;
+    root.querySelector('#pef-del').onclick = function() {
+      if (!confirm('删除这条经期记录？')) return;
+      var data = loadPeriodData();
+      data.records.splice(idx, 1);
+      savePeriodData(data);
+      window._closeModal();
+      refreshPeriod();
+    };
+    root.querySelector('#period-edit-form').onsubmit = function(e) {
+      e.preventDefault();
+      var f = e.target;
+      var start = f.start.value;
+      var end = f.end.value || start;
+      if (start > end) { alert('结束日期不能早于开始日期'); return; }
+      var data = loadPeriodData();
+      data.records[idx] = { start: start, end: end };
+      savePeriodData(data);
+      window._closeModal();
+      refreshPeriod();
+    };
+  }
+
+  function openPeriodSettings() {
+    var data = loadPeriodData();
+    var html = '<h3>姨妈日历设置</h3>' +
+      '<form id="period-settings-form">' +
+      '<div class="form-two-col">' +
+      '<div class="form-row"><label>平均周期 (天)</label>' +
+      '<input name="cycleLength" type="number" min="20" max="50" value="' + data.cycleLength + '"></div>' +
+      '<div class="form-row"><label>经期天数 (天)</label>' +
+      '<input name="periodLength" type="number" min="2" max="10" value="' + data.periodLength + '"></div>' +
+      '</div>' +
+      '<div class="muted small" style="margin-top:4px">系统会根据历史经期记录自动计算实际平均周期</div>' +
+      '<div class="btn-row"><button type="button" class="btn" id="ps-cancel">取消</button>' +
+      '<button type="submit" class="btn primary">保存</button></div></form>';
+    var root = window._openModal(html);
+    root.querySelector('#ps-cancel').onclick = window._closeModal;
+    root.querySelector('#period-settings-form').onsubmit = function(e) {
+      e.preventDefault();
+      var f = e.target;
+      data.cycleLength = parseInt(f.cycleLength.value) || 28;
+      data.periodLength = parseInt(f.periodLength.value) || 5;
+      savePeriodData(data);
+      window._closeModal();
+      refreshPeriod();
+    };
+  }
+
+  function refreshPeriod() {
+    var el = document.getElementById('health-period');
+    if (el) el.innerHTML = renderPeriodTab();
+    bindPeriodEvents();
+  }
+
+  function bindPeriodEvents() {
+    var el = document.getElementById('view-health');
+    if (!el) return;
+    var prev = document.getElementById('pc-prev');
+    var next = document.getElementById('pc-next');
+    if (prev) prev.onclick = function() {
+      pCalMonth--;
+      if (pCalMonth < 0) { pCalMonth = 11; pCalYear--; }
+      refreshPeriod();
+    };
+    if (next) next.onclick = function() {
+      pCalMonth++;
+      if (pCalMonth > 11) { pCalMonth = 0; pCalYear++; }
+      refreshPeriod();
+    };
+    var title = document.getElementById('pc-title');
+    if (title) title.onclick = function() {
+      var mNames = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+      var html = '<h3>选择年月</h3><div style="margin:12px 0">';
+      html += '<div style="font-size:13px;color:var(--muted);margin-bottom:6px">年份</div><div class="pick" style="margin-bottom:12px">';
+      for (var y = pCalYear - 3; y <= pCalYear + 3; y++) {
+        html += '<div class="pk' + (y === pCalYear ? ' on' : '') + '" data-pick-year="' + y + '" style="width:auto;padding:0 12px;border-radius:8px;font-size:14px">' + y + '</div>';
+      }
+      html += '</div><div style="font-size:13px;color:var(--muted);margin-bottom:6px">月份</div><div class="pick">';
+      mNames.forEach(function(name, i) {
+        html += '<div class="pk' + (i === pCalMonth ? ' on' : '') + '" data-pick-month="' + i + '" style="width:auto;padding:4px 10px;border-radius:8px;font-size:13px">' + name + '</div>';
+      });
+      html += '</div></div>';
+      html += '<div class="btn-row"><button class="btn" id="pym-cancel">取消</button>' +
+        '<button class="btn primary" id="pym-ok">确定</button></div>';
+      var root = window._openModal(html);
+      var pickYear = pCalYear, pickMonth = pCalMonth;
+      root.querySelectorAll('[data-pick-year]').forEach(function(p) {
+        p.onclick = function() {
+          pickYear = parseInt(p.dataset.pickYear, 10);
+          root.querySelectorAll('[data-pick-year]').forEach(function(x) { x.classList.remove('on'); });
+          p.classList.add('on');
+        };
+      });
+      root.querySelectorAll('[data-pick-month]').forEach(function(p) {
+        p.onclick = function() {
+          pickMonth = parseInt(p.dataset.pickMonth, 10);
+          root.querySelectorAll('[data-pick-month]').forEach(function(x) { x.classList.remove('on'); });
+          p.classList.add('on');
+        };
+      });
+      root.querySelector('#pym-cancel').onclick = window._closeModal;
+      root.querySelector('#pym-ok').onclick = function() {
+        pCalYear = pickYear; pCalMonth = pickMonth;
+        window._closeModal(); refreshPeriod();
+      };
+    };
+    el.querySelectorAll('#health-period .cal-cell[data-date]').forEach(function(cell) {
+      cell.onclick = function() { openPeriodDaySheet(cell.dataset.date); };
+    });
+    var settingsBtn = document.getElementById('pc-settings');
+    if (settingsBtn) settingsBtn.onclick = openPeriodSettings;
+    el.querySelectorAll('#health-period .period-history-item').forEach(function(item) {
+      item.onclick = function() {
+        var data = loadPeriodData();
+        var sorted = data.records.slice().sort(function(a, b) { return b.start.localeCompare(a.start); });
+        var idx = parseInt(item.dataset.pidx, 10);
+        openPeriodEditForm(sorted[idx], data.records.indexOf(sorted[idx]));
+      };
+    });
+  }
+
   // ===== FAB =====
   function updateHealthFab() {
     var fab = document.getElementById('fab-health');
@@ -404,6 +768,7 @@ var Health = (function() {
     var html = '';
     html += '<div id="health-body"' + (tab !== 'body' ? ' class="hidden"' : '') + '>' + renderBodyTab() + '</div>';
     html += '<div id="health-exercise"' + (tab !== 'exercise' ? ' class="hidden"' : '') + '>' + renderExerciseTab() + '</div>';
+    html += '<div id="health-period"' + (tab !== 'period' ? ' class="hidden"' : '') + '>' + renderPeriodTab() + '</div>';
     el.innerHTML = html;
 
     // Body events
@@ -412,6 +777,7 @@ var Health = (function() {
     });
 
     bindCalEvents();
+    bindPeriodEvents();
     updateHealthFab();
   }
 
@@ -527,13 +893,14 @@ var Health = (function() {
 
   // Data access for backup/restore
   function exportData() {
-    return JSON.stringify({ body: loadBody(), exercise: loadExer() });
+    return JSON.stringify({ body: loadBody(), exercise: loadExer(), periods: loadPeriodData() });
   }
   function importData(json) {
     try {
       var d = JSON.parse(json);
       if (d.body) saveBody(d.body);
       if (d.exercise) saveExer(d.exercise);
+      if (d.periods) savePeriodData(d.periods);
     } catch(e) {}
   }
 
