@@ -173,7 +173,7 @@ var Health = (function() {
   }
 
   // ===== Exercise Calendar =====
-  var EXER_TYPES = ['跑步', '游泳', '力量训练', '瑜伽', '网球', '骑行', '跳绳', 'HIIT', '散步', '其他'];
+  var EXER_TYPES = ['跑步', '游泳', '力量训练', '瑜伽', '网球', '羽毛球', '骑行', '跳绳', 'HIIT', '散步', '其他'];
 
   function initCalendar() {
     var now = new Date();
@@ -202,7 +202,7 @@ var Health = (function() {
 
     html += '<div class="summary-grid" style="margin-bottom:12px">' +
       '<div class="summary-card"><div class="label">本月运动天数</div><div class="value">' + dayCount + '</div></div>' +
-      '<div class="summary-card"><div class="label">总时长</div><div class="value">' + totalMin + '<span style="font-size:11px;font-weight:400;color:var(--muted)"> min</span></div></div></div>';
+      '<div class="summary-card"><div class="label">总时长</div><div class="value">' + totalMin + '<span style="font-size:11px;font-weight:400;color:var(--muted)"> 小时</span></div></div></div>';
 
     // Calendar nav
     var mNames = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
@@ -240,7 +240,7 @@ var Health = (function() {
         html += '<div class="card" style="padding:10px 14px;margin-bottom:6px">' +
           '<div style="display:flex;justify-content:space-between;align-items:center">' +
           '<span>' + esc(e.type) + '</span>' +
-          '<span style="color:var(--accent);font-weight:600">' + (e.duration || 0) + ' min</span></div>' +
+          '<span style="color:var(--accent);font-weight:600">' + (e.duration || 0) + ' 小时</span></div>' +
           (e.note ? '<div class="muted small" style="margin-top:4px">' + esc(e.note) + '</div>' : '') +
           '</div>';
       });
@@ -255,8 +255,8 @@ var Health = (function() {
       '<input name="date" type="date" required value="' + (dateStr || today()) + '"></div>' +
       '<div class="form-row"><label>运动类型</label>' +
       '<select name="type">' + EXER_TYPES.map(function(t) { return '<option>' + t + '</option>'; }).join('') + '</select></div>' +
-      '<div class="form-row"><label>时长 (分钟)</label>' +
-      '<input name="duration" type="number" min="1" required placeholder="30"></div>' +
+      '<div class="form-row"><label>时长 (小时)</label>' +
+      '<input name="duration" type="number" step="0.5" min="0.5" required placeholder="1"></div>' +
       '<div class="form-row"><label>备注 (可选)</label>' +
       '<input name="note" placeholder=""></div>' +
       '<div class="btn-row"><button type="button" class="btn" id="ef-cancel">取消</button>' +
@@ -269,7 +269,7 @@ var Health = (function() {
       var obj = {
         date: f.date.value,
         type: f.type.value,
-        duration: parseInt(f.duration.value) || 0,
+        duration: parseFloat(f.duration.value) || 0,
         note: f.note.value.trim()
       };
       if (!obj.date || !obj.duration) { alert('请填写日期和时长'); return; }
@@ -860,7 +860,7 @@ var Health = (function() {
           var html = '<h3>' + ds + ' 运动记录</h3>';
           dayEx.forEach(function(e, i) {
             html += '<div class="row" style="justify-content:space-between">' +
-              '<span>' + esc(e.type) + ' · ' + e.duration + 'min</span>' +
+              '<span>' + esc(e.type) + ' · ' + e.duration + '小时</span>' +
               '<button class="btn small danger exer-del" data-date="' + e.date + '" data-idx="' + i + '">删除</button></div>';
           });
           html += '<div class="btn-row"><button class="btn" id="dd-close">关闭</button>' +
