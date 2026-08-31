@@ -768,7 +768,12 @@ var Health = (function() {
     var html = '';
     html += '<div id="health-body"' + (tab !== 'body' ? ' class="hidden"' : '') + '>' + renderBodyTab() + '</div>';
     html += '<div id="health-exercise"' + (tab !== 'exercise' ? ' class="hidden"' : '') + '>' + renderExerciseTab() + '</div>';
-    html += '<div id="health-period"' + (tab !== 'period' ? ' class="hidden"' : '') + '>' + renderPeriodTab() + '</div>';
+    try {
+      html += '<div id="health-period"' + (tab !== 'period' ? ' class="hidden"' : '') + '>' + renderPeriodTab() + '</div>';
+    } catch(e) {
+      console.error('Period tab render error:', e);
+      html += '<div id="health-period"' + (tab !== 'period' ? ' class="hidden"' : '') + '><div class="card muted center">姨妈日历加载出错</div></div>';
+    }
     el.innerHTML = html;
 
     // Body events
@@ -777,7 +782,7 @@ var Health = (function() {
     });
 
     bindCalEvents();
-    bindPeriodEvents();
+    try { bindPeriodEvents(); } catch(e) { console.error('Period events bind error:', e); }
     updateHealthFab();
   }
 
@@ -849,8 +854,10 @@ var Health = (function() {
       };
     };
 
-    // Day cell clicks
-    el.querySelectorAll('.cal-cell[data-date]').forEach(function(cell) {
+    // Day cell clicks (scoped to exercise calendar only)
+    var exerEl = document.getElementById('health-exercise');
+    var calContainer = exerEl || el;
+    calContainer.querySelectorAll('.cal-cell[data-date]').forEach(function(cell) {
       cell.onclick = function() {
         var ds = cell.dataset.date;
         var exercises = loadExer();
