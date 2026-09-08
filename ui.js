@@ -1,7 +1,7 @@
 /* global Core, Gist, Trades */
 'use strict';
 const LS_KEY = 'assetbook.v1';
-const BUILD_ID = '202608311142';
+const BUILD_ID = '202609081618';
 const $ = sel => document.querySelector(sel);
 
 let state = loadState();
@@ -1170,10 +1170,10 @@ function openTradeActions(rec) {
     actions.push({ label: '取消退款', fn: () => { Trades.markRefunded(rec, false); toast('已取消退款'); } });
   } else {
     actions.push({ label: rec.shipped ? '标为待发货' : '标为已发货',
-      fn: () => { Trades.markShipped(rec, !rec.shipped); toast(rec.shipped ? '已取消发货' : '已标发货'); } });
+      fn: () => { var ns = !rec.shipped; Trades.markShipped(rec, ns); toast(ns ? '已标发货' : '已取消发货'); } });
     if (rec.sellPrice > 0) {
       actions.push({ label: rec.paid ? '标为待回款' : '标为已回款',
-        fn: () => { Trades.markPaid(rec, !rec.paid); toast(rec.paid ? '已取消回款' : '已标回款'); } });
+        fn: () => { var ns = !rec.paid; Trades.markPaid(rec, ns); toast(ns ? '已标回款' : '已取消回款'); } });
     }
     actions.push({ label: '编辑', fn: () => { closeModal(); setTimeout(() => openTradeForm(rec), 100); }, keepOpen: true });
     actions.push({ label: '标为已退款', fn: () => { Trades.markRefunded(rec, true); toast('已标退款'); } });
