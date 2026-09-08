@@ -114,7 +114,6 @@ function renderList() {
     var pCls = r.sellPrice === 0 ? 'zero' : (profit >= 0 ? 'positive' : 'negative');
     var pTxt = r.sellPrice === 0 ? '\u672a\u5356\u51fa' : (profit >= 0 ? '+' : '') + fmt(profit);
     return '<div class="trade-card-wrap" data-idx="'+i+'">' +
-      '<div class="trade-card-row">' +
       '<div class="trade-card">' +
       '<div class="tc-top"><div class="tc-name">'+esc(r.name)+'</div><div class="tc-profit '+pCls+'">'+pTxt+'</div></div>' +
       '<div class="tc-meta"><span>\u4e70 '+fmt(r.buyPrice)+'</span><span>\u5356 '+(r.sellPrice>0?fmt(r.sellPrice):'-')+'</span><span>'+r.date.substring(0,10)+'</span></div>' +
@@ -126,72 +125,14 @@ function renderList() {
         '<div class="dl-row"><span>\u95f2\u9c7c\u8ba2\u5355</span><span class="dl-val">'+esc(r.sellOrderNo||'-')+'</span></div>' +
         '<div class="dl-row"><span>\u4e70\u5bb6</span><span class="dl-val">'+esc(r.buyer||'-')+'</span></div>' +
         '<div class="dl-row"><span>\u5907\u6ce8</span><span class="dl-val">'+esc(r.note||'-')+'</span></div>' +
-      '</div></div>' +
-      '<div class="trade-card-actions">' +
-        '<button class="sw-btn sw-edit">\u7f16\u8f91</button>' +
-        '<button class="sw-btn sw-delete">\u5220\u9664</button>' +
       '</div></div></div>';
   }).join('');
   var cnt = document.getElementById('trade-count');
   if (cnt) cnt.textContent = '\u5171 ' + list.length + ' \u7b14';
 
-  // Swipe-to-reveal actions (smooth drag)
-  var SW_OPEN = 120;
-  var swActive = null;
-  function closeAllSwipes() {
-    if (swActive) {
-      var c = swActive.querySelector('.trade-card');
-      c.style.transform = '';
-      c.style.transition = 'transform 0.25s ease';
-      swActive.classList.remove('swiped');
-      swActive = null;
-    }
-  }
+  // Card interaction: click to toggle detail, long press for actions
   el.querySelectorAll('.trade-card-wrap').forEach(function(wrap) {
     var card = wrap.querySelector('.trade-card');
-    var startX = 0, currentX = 0, dragging = false, isOpen = false;
-
-    wrap.addEventListener('touchstart', function(e) {
-      startX = e.touches[0].clientX;
-      currentX = startX;
-      dragging = true;
-      card.style.transition = 'none';
-      if (swActive && swActive !== wrap) closeAllSwipes();
-    }, { passive: true });
-
-    wrap.addEventListener('touchmove', function(e) {
-      if (!dragging) return;
-      currentX = e.touches[0].clientX;
-      var dx = currentX - startX;
-      if (isOpen) dx -= SW_OPEN;
-      dx = Math.min(0, Math.max(-SW_OPEN * 1.3, dx));
-      card.style.transform = 'translateX(' + dx + 'px)';
-    }, { passive: true });
-
-    wrap.addEventListener('touchend', function() {
-      if (!dragging) return;
-      dragging = false;
-      var dx = currentX - startX;
-      card.style.transition = 'transform 0.25s ease';
-      if (!isOpen && dx < -30) {
-        card.style.transform = 'translateX(-' + SW_OPEN + 'px)';
-        wrap.classList.add('swiped');
-        isOpen = true;
-        swActive = wrap;
-      } else if (isOpen && dx > 30) {
-        card.style.transform = '';
-        wrap.classList.remove('swiped');
-        isOpen = false;
-        if (swActive === wrap) swActive = null;
-      } else {
-        if (isOpen) {
-          card.style.transform = 'translateX(-' + SW_OPEN + 'px)';
-        } else {
-          card.style.transform = '';
-          wrap.classList.remove('swiped');
-        }
-      }
-    });
 
     // Long press
     var pressTimer = null, pressed = false;
@@ -206,47 +147,19 @@ function renderList() {
     }
     function endPress() { clearTimeout(pressTimer); }
 
-    card.addEventListener('touchstart', function() { if (!wrap.classList.contains('swiped')) startPress(); }, { passive: true });
-    card.addEventListener('touchend', function() { endPress(); });
+    card.addEventListener('touchstart', startPress, { passive: true });
+    card.addEventListener('touchend', endPress);
     card.addEventListener('touchcancel', endPress);
-    card.addEventListener('mousedown', function() { if (!wrap.classList.contains('swiped')) startPress(); });
+    card.addEventListener('mousedown', startPress);
     card.addEventListener('mouseup', endPress);
     card.addEventListener('mouseleave', endPress);
 
-    // Click to toggle detail (only if not swiped and not long-pressed)
+    // Click to toggle detail
     card.addEventListener('click', function() {
       if (pressed) { pressed = false; return; }
-      if (wrap.classList.contains('swiped')) return;
       var d = document.getElementById('td-' + wrap.dataset.idx);
       if (d) d.classList.toggle('open');
     });
-
-    // Edit button
-    wrap.querySelector('.sw-edit').addEventListener('click', function(e) {
-      e.stopPropagation();
-      var rec = list[parseInt(wrap.dataset.idx, 10)];
-      if (rec) {
-        closeAllSwipes();
-        var ev = new CustomEvent('trade-edit', { detail: { rec: rec } });
-        document.dispatchEvent(ev);
-      }
-    });
-
-    // Delete button
-    wrap.querySelector('.sw-delete').addEventListener('click', function(e) {
-      e.stopPropagation();
-      var rec = list[parseInt(wrap.dataset.idx, 10)];
-      if (rec && confirm('\u786e\u5b9a\u5220\u9664\u8fd9\u6761\u8bb0\u5f55\uff1f')) {
-        deleteRecord(rec);
-        closeAllSwipes();
-        refresh();
-      }
-    });
-  });
-
-  // Close swipe when clicking outside
-  document.addEventListener('click', function(e) {
-    if (!e.target.closest('.trade-card-wrap')) closeAllSwipes();
   });
 }
 

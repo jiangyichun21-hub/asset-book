@@ -220,17 +220,8 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 
 .trade-list { display: flex; flex-direction: column; gap: 8px; }
 
-/* Swipe-to-reveal actions */
+/* Trade card */
 .trade-card-wrap { position: relative; overflow: hidden; border-radius: 12px; }
-.trade-card-row { position: relative; }
-.trade-card-actions { position: absolute; right: 0; top: 0; height: 100%; display: flex; z-index: 1; }
-.sw-btn { border: 0; color: #fff; font-size: 13px; font-weight: 500; width: 60px;
-  display: flex; align-items: center; justify-content: center; cursor: pointer; }
-.sw-edit { background: #94a3b8; }
-.sw-delete { background: #c4928f; }
-.trade-card-actions .sw-delete { border-radius: 0 12px 12px 0; }
-.trade-card-row > .trade-card { position: relative; z-index: 2; transition: transform 0.25s ease; margin-bottom: 0; }
-.trade-card-wrap.swiped .trade-card { transform: translateX(-120px); }
 .trade-card { background: var(--card); border-radius: 12px; border: 1px solid var(--line);
   padding: 12px 14px; cursor: pointer; transition: box-shadow 0.15s; }
 .trade-card:active { box-shadow: 0 0 0 2px #e5e7fd; }

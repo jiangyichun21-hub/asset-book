@@ -1,7 +1,7 @@
 /* global Core, Gist, Trades */
 'use strict';
 const LS_KEY = 'assetbook.v1';
-const BUILD_ID = '202609081618';
+const BUILD_ID = '202609081624';
 const $ = sel => document.querySelector(sel);
 
 let state = loadState();
@@ -1199,9 +1199,6 @@ document.addEventListener('trade-longpress', function(e) {
   const idx = parseInt(e.detail.idx, 10);
   const rec = Trades.getRecordByFilteredIdx(idx);
   if (rec) openTradeActions(rec);
-});
-document.addEventListener('trade-edit', function(e) {
-  if (e.detail && e.detail.rec) openTradeForm(e.detail.rec);
 });
 $('#fab-trade').onclick = () => openTradeForm(null);
 $('#fab-health').onclick = () => Health.onFabClick();
