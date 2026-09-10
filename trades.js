@@ -24,6 +24,25 @@ function initIfNeeded() {
     state = JSON.parse(JSON.stringify(DEFAULT_DATA));
     save();
   }
+  migrateFeeFix();
+}
+
+// One-time migration: fix fee=0 for recent records (last 10 days)
+function migrateFeeFix() {
+  if (localStorage.getItem('assetbook.migration.fee-fix-v1')) return;
+  var now = new Date();
+  var cutoff = new Date(now);
+  cutoff.setDate(cutoff.getDate() - 10);
+  var cutoffStr = cutoff.toISOString().substring(0, 10);
+  var changed = false;
+  state.records.forEach(function(r) {
+    if (r.date && r.date.substring(0, 10) >= cutoffStr && r.buyPrice > 0 && (!r.fee || r.fee === 0)) {
+      r.fee = Math.round(r.buyPrice * 0.01 * 100) / 100;
+      changed = true;
+    }
+  });
+  if (changed) save();
+  localStorage.setItem('assetbook.migration.fee-fix-v1', '1');
 }
 
 function fmt(n) { return Number(n).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
