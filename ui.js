@@ -1,7 +1,7 @@
 /* global Core, Gist, Trades */
 'use strict';
 const LS_KEY = 'assetbook.v1';
-const BUILD_ID = '202609081624';
+const BUILD_ID = '202609101134';
 const $ = sel => document.querySelector(sel);
 
 let state = loadState();
@@ -1133,6 +1133,18 @@ function openTradeForm(record) {
     '</div></form>';
   openModal(html);
   $('#tf-cancel').onclick = closeModal;
+  // Auto-calculate fee as 1% of buy price for new records
+  if (!isEdit) {
+    var buyInput = document.querySelector('[name="buyPrice"]');
+    var feeInput = document.querySelector('[name="fee"]');
+    var feeAuto = true;
+    buyInput.addEventListener('input', function() {
+      if (!feeAuto) return;
+      var bp = parseFloat(buyInput.value) || 0;
+      feeInput.value = bp ? (bp * 0.01).toFixed(2) : '';
+    });
+    feeInput.addEventListener('input', function() { feeAuto = false; });
+  }
   $('#trade-form').addEventListener('submit', function(e) {
     e.preventDefault();
     const f = e.target;
