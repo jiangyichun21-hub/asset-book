@@ -1,7 +1,7 @@
 /* global Core, Gist, Trades */
 'use strict';
 const LS_KEY = 'assetbook.v1';
-const BUILD_ID = '202609101420';
+const BUILD_ID = '202609111000';
 const $ = sel => document.querySelector(sel);
 
 let state = loadState();
@@ -679,6 +679,8 @@ function renderBadge() {
 }
 function scheduleBackup() {
   if (!state.settings.gistToken) return;
+  state.settings.localModifiedAt = Date.now();
+  saveState();
   clearTimeout(backupTimer);
   backupTimer = setTimeout(doBackup, 3000);
   renderBadge();
@@ -1316,10 +1318,14 @@ async function pullFromGist(silent) {
   }, { passive: true });
 })();
 
-// On-open silent Gist pull
+// On-open silent Gist pull (skip if local data is newer than last backup)
 window.addEventListener('load', function() {
   const s = state.settings;
   if (s.gistToken && s.gistId) {
+    if (s.localModifiedAt && s.lastBackupAt && s.localModifiedAt > s.lastBackupAt) {
+      showSync('', '本地有未备份的修改，跳过自动同步');
+      return;
+    }
     showSync('', '正在从云端同步…');
     pullFromGist(true);
   }
